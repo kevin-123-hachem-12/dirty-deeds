@@ -88,8 +88,31 @@ canvas#game{display:block;width:100%;height:auto;aspect-ratio:1200/640;touch-act
 .below{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:16px;align-items:start}
 .shelf{padding:10px 14px 14px}
 .shelf h3,.page h3{margin:0 0 8px;font-family:var(--sign);font-weight:400;font-size:15px;letter-spacing:.04em}
-.slots{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
-.slot{aspect-ratio:1;background:#3b2414;border:3px solid var(--ink);border-radius:6px;box-shadow:inset 0 4px 8px rgba(0,0,0,.6);display:grid;place-items:center;position:relative;min-width:0}
+.slots{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px}
+/* pockets: little wooden crates with brass corners; tap one to pick it (a glowing ring), the marbles show how many are left */
+.slot{aspect-ratio:1;background:radial-gradient(circle at 50% 30%,#7a5030,#2e1c10 78%);border:3px solid var(--ink);border-radius:10px;box-shadow:inset 0 3px 8px rgba(0,0,0,.65),inset 0 0 0 2px rgba(255,214,140,.12),0 3px 0 var(--ink);display:grid;place-items:center;position:relative;min-width:0;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.slot::before,.slot::after{content:"";position:absolute;width:6px;height:6px;border-radius:50%;background:#d9b25a;border:1px solid var(--ink);top:3px;left:3px}
+.slot::after{left:auto;right:3px}
+.slot:active{transform:scale(.92)}
+.slot.sel{border-color:#f5c400;box-shadow:0 0 0 3px #f5c400,0 0 16px rgba(245,196,0,.85),inset 0 3px 8px rgba(0,0,0,.5);transform:translateY(-3px)}
+.slot em{position:absolute;z-index:1;right:-6px;top:-7px;min-width:20px;font-style:normal;font-family:var(--shout);font-size:13px;line-height:18px;text-align:center;color:#fff;background:var(--red);border:2px solid var(--ink);border-radius:999px}
+/* achievements on the Rewards board */
+.rw-head{font-family:var(--sign);font-weight:400;font-size:21px;color:var(--ink);margin:20px 0 10px}
+.rw-head small{font-size:15px;color:#4a2c1a;margin-left:6px}
+.ach-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.ach{display:grid;grid-template-columns:38px 1fr;gap:0 10px;align-items:center;background:#fffdf6;color:var(--ink);border:2px solid var(--ink);padding:7px 10px;box-shadow:2px 3px 0 rgba(0,0,0,.35);opacity:.6}
+.ach.got{opacity:1;background:#fff4c4}
+.ach i{grid-row:span 2;font-style:normal;font-size:26px;text-align:center;filter:grayscale(1)}
+.ach.got i{filter:none}
+.ach b{font-family:var(--sign);font-weight:400;font-size:15px;line-height:1.1}
+.ach span{font-size:13px;line-height:1.2;color:#4a3a32}
+/* loading screen */
+.overlay.loading{background:radial-gradient(ellipse at 50% 45%,#3b2a44,#140c18 78%);backdrop-filter:none;-webkit-backdrop-filter:none}
+.load-box{display:flex;flex-direction:column;align-items:center;gap:18px;width:min(440px,86vw);text-align:center}
+.load-box .logo{font-size:clamp(46px,9vw,78px)}
+.load-bar{width:100%;height:24px;border:3px solid var(--ink);border-radius:12px;background:#2e1c10;box-shadow:0 3px 0 var(--ink);overflow:hidden}
+.load-bar i{display:block;height:100%;width:0;background:repeating-linear-gradient(-45deg,#f5c400 0 12px,#e8a800 12px 24px);transition:width .25s}
+#loadText{margin:0;font-family:var(--sign);color:#fff7e6;font-size:18px;min-height:1.3em}
 .slot canvas{width:80%;height:80%}
 .slot span{position:absolute;left:50%;bottom:-10px;transform:translateX(-50%) rotate(-2deg);background:rgba(205,205,195,.95);color:var(--ink);font-family:var(--hand);font-size:12px;line-height:1;padding:2px 5px;white-space:nowrap;max-width:110%;overflow:hidden;text-overflow:ellipsis}
 .slot.new{animation:drop .45s}
@@ -262,7 +285,7 @@ html.app .app-spacer{display:block}
   html.app .gauge .lab b{font-size:15px}
   html.app .clock{font-size:22px}
   html.app .small-sign{font-size:14px;padding:6px 12px}
-  html.app .slot{width:48px}
+  html.app .slot{width:56px}
 }
 /* phone: two compact groups, the day's state on the left and the buttons on the right */
 html.app .plank{border-width:2px;box-shadow:0 2px 0 var(--ink)}
@@ -283,7 +306,7 @@ html.app .below{position:absolute;z-index:5;left:max(8px,env(safe-area-inset-lef
 html.app .shelf{padding:4px 5px;pointer-events:auto;box-shadow:0 3px 0 var(--ink)}
 html.app .shelf h3,html.app .shelf.tape::after{display:none}
 html.app .slots{display:flex;gap:4px}
-html.app .slot{width:36px;cursor:pointer}
+html.app .slot{width:46px}
 html.app .shelf.empty{display:none}
 html.app .slot{border-width:2px}
 html.app .slot span{display:none}
@@ -382,6 +405,14 @@ html.app .below .page.open .checklist{grid-template-columns:minmax(0,1fr)}
   </section>
 </div>
 
+<div class="overlay loading" id="loading" hidden>
+  <div class="load-box">
+    <div class="logo">Dirty Deeds</div>
+    <div class="load-bar"><i id="loadFill"></i></div>
+    <p id="loadText">Painting the neighbourhood...</p>
+    <button class="small-sign" id="loadSkip" type="button">Skip</button>
+  </div>
+</div>
 <div class="overlay title" id="menu">
   <canvas class="menu-char left" id="menuPrank" aria-hidden="true" hidden></canvas>
   <canvas class="menu-char right" id="menuGerald" aria-hidden="true" hidden></canvas>
@@ -415,6 +446,7 @@ html.app .below .page.open .checklist{grid-template-columns:minmax(0,1fr)}
     <div class="opts">
       <button class="small-sign" id="optSound" type="button">Sound effects: on</button>
       <button class="small-sign" id="optMusic" type="button">Music: on</button>
+      <button class="small-sign" id="optVibe" type="button" hidden>Vibration: on</button>
       <button class="small-sign" id="optFull" type="button" hidden>Play full screen</button>
       <button class="small-sign" id="optReset" type="button">Reset progress</button>
       <p id="optNote" style="font-size:16px"></p>
@@ -443,6 +475,8 @@ html.app .below .page.open .checklist{grid-template-columns:minmax(0,1fr)}
     <div class="row" style="justify-content:space-between"><h2>Rewards <small id="rwStars"></small></h2><button class="small-sign" id="rwBack" type="button">Back</button></div>
     <p class="cork-note">Stars unlock gadgets and hats. Each gadget adds a bonus prank to every day: extra points, never needed to finish. Tap an unlocked hat to wear it.</p>
     <div class="rw-grid" id="rwGrid"></div>
+    <h3 class="rw-head">Achievements <small id="achCount"></small></h3>
+    <div class="ach-grid" id="achGrid"></div>
   </div>
 </div>
 
@@ -477,6 +511,9 @@ html.app .below .page.open .checklist{grid-template-columns:minmax(0,1fr)}
       <li>New pranks: animals send him running out of the room, food sends him hunting for water, and noise pranks go off a few seconds after you set them and lure him over.</li>
       <li>He gets smarter: he checks spots where he was pranked, notices missing things, searches the hiding spot he last found you in, and on harder days sets traps. Tap a trap to disarm it.</li>
       <li>From the garage on, Gerald's bulldog Biscuit sometimes patrols downstairs. If he sees you he barks and Gerald comes running. Feed him the sausage from your yard to keep him busy for 15 seconds, but while you carry it he follows you and whines.</li>
+      <li>Tap once to sneak, silently. Double-tap to run: much faster, but he hears your footsteps if he's on the same floor.</li>
+      <li>Tap an item in your pockets and the spots that need it light up. You start every day with a bag of marbles: tap it, then tap somewhere nearby to throw one. Gerald goes to look at the noise. Three per day.</li>
+      <li>A red glow around the screen means he's coming into your room. Hide!</li>
       <li>Every prank snaps a photo for your Photo Album. Stars unlock Rewards: gadgets that add a bonus prank to every day, and hats for the Prankster.</li>
       <li>Waiting for him? Press and hold the fast-forward button in the corner (or hold F) to run time three times as fast. The gear button pauses the day, with sound, music, restart and the main menu inside. P also pauses.</li>
     </ul>
@@ -530,7 +567,7 @@ const ctx = cv.getContext('2d');
 // Camera: world px -> screen px. Desktop shows the whole house; phones follow the Prankster up close.
 let VW = W, VH = H, appMode = false;
 const cam = { x: W / 2, y: H / 2, z: 1, tz: 1, mode: 'fit', manual: false };
-const PAD_TOP = () => appMode ? (VH > VW ? 92 : 48) : 0, PAD_BOT = () => appMode ? 58 : 0;   // screen px covered by the floating HUD / pockets
+const PAD_TOP = () => appMode ? (VH > VW ? 92 : 48) : 0, PAD_BOT = () => appMode ? 68 : 0;   // screen px covered by the floating HUD / pockets
 const zoomBounds = () => { const fit = Math.min(VW / W, (VH - PAD_TOP() - PAD_BOT()) / H); return [fit, Math.max(fit, 2.6)]; };
 const followZoom = () => { const [lo, hi] = zoomBounds(); return clamp(Math.min(VH / 300, VW / 340, 1.4), lo, hi); };   // about one floor tall, one room wide
 function updateCamera(dt) {
@@ -628,7 +665,7 @@ const ITEMS = {
   salt: 'Salt', wrench: 'Wrench', soap: 'Washing-up liquid', bucket: 'Bucket of water', pondwater: 'Jar of pond water',
   paperclip: 'Paperclip', fork: 'Fork', pliers: 'Pliers', cable: 'Extension lead', screwdriver: 'Screwdriver',
   mouse: 'Mouse in a box', beejar: 'Jar of bees', crab: 'Crab in a bucket', chips: 'Bag of chips', chilli: 'Extra-hot chilli', prunes: 'Prune juice',
-  alarmclock: 'Alarm clock', airhorn: 'Air horn', sausage: 'Sausage',
+  alarmclock: 'Alarm clock', airhorn: 'Air horn', sausage: 'Sausage', marbles: 'Bag of marbles',
 };
 const PRANKS = {
   remoteGlue:  { spot: 'remote',  fam: 'glue',  need: 'superglue',   name: 'Glue the remote to the table', pts: 110, say: 'Let GO of me!',          fx: 'YANK!',      prop: 'remote' },
@@ -703,6 +740,12 @@ const GADGETS = {
 const HATS = [
   { id: 'hat-beanie', name: 'Beanie', stars: 3 }, { id: 'hat-cap', name: 'Backwards cap', stars: 10 }, { id: 'hat-bandana', name: 'Pirate bandana', stars: 20 },
   { id: 'hat-gnome', name: 'Gnome hat', stars: 32 }, { id: 'hat-crown', name: 'Golden crown', stars: 45 },
+];
+// Whole outfits for the Prankster. Each shows on the Rewards board and can be worn once its paintings exist
+// (outfit-<id>-idle, -creep, -work, -climb, -cheer, -caught).
+const OUTFITS = [
+  { id: 'ninja', name: 'Ninja', stars: 14 }, { id: 'postman', name: 'Postman', stars: 22 },
+  { id: 'pyjamas', name: 'Pyjamas', stars: 28 }, { id: 'clown', name: 'Clown', stars: 40 },
 ];
 // Item positions: x, floor, h = height above the floor it rests at.
 const LEVELS = [
@@ -1040,6 +1083,17 @@ function noise(d, v = .06, filter, f1 = 1000, f2, when) {
   if (filter) { const fl = a.createBiquadFilter(); fl.type = filter; fl.frequency.setValueAtTime(f1, t); if (f2) fl.frequency.exponentialRampToValueAtTime(f2, t + d); fl.Q.value = 1.2; s.connect(fl); node = fl; }
   node.connect(g).connect(when ? musicBus : sfxBus); s.start(t);
 }
+// Phones that can vibrate buzz for the big moments (Options can turn it off)
+let vibeOn = (() => { try { return localStorage.getItem('dd-vibe') !== '0'; } catch (e) { return true; } })();
+function buzz(p) { if (vibeOn && navigator.vibrate) try { navigator.vibrate(p); } catch (e) {} }
+// Gerald's voice: a burst of cartoon mumbling whenever he shouts. Low and buzzy when angry, high when scared.
+let voiceAt = 0;
+function voice(text) {
+  if (!soundOn || perf - voiceAt < .4) return; voiceAt = perf;
+  const scared = /EEK|SPIDER|BEE|MOUSE|RAT|AAA|EEE|GET IT OFF|HELP|OW!/i.test(text), angry = !scared && /!/.test(text);
+  const base = scared ? 340 : angry ? 145 : 200, n = Math.min(7, Math.max(2, Math.ceil(text.length / 6)));
+  for (let i = 0; i < n; i++) setTimeout(() => { const f = base * (.85 + Math.random() * .4); tone(f, .075, angry ? 'sawtooth' : 'square', angry ? .035 : .026, f * (scared ? 1.25 : .82)); }, i * 85);
+}
 function sfx(n) {
   const seq = (list, d, type) => list.forEach((f, i) => setTimeout(() => tone(f, d, type), i * d * 900));
   switch (n) {
@@ -1057,6 +1111,9 @@ function sfx(n) {
     case 'hide': tone(330, .1, 'sine', .07, 250); break;
     case 'bark': for (let i = 0; i < 2; i++) setTimeout(() => { tone(240, .13, 'sawtooth', .09, 130); noise(.1, .07, 'bandpass', 900); }, i * 230); break;
     case 'whine': tone(880, .5, 'sine', .035, 620); break;
+    case 'heart': tone(62, .12, 'sine', .16, 46); setTimeout(() => tone(56, .1, 'sine', .12, 42), 170); break;
+    case 'throw': noise(.18, .05, 'bandpass', 1800, 900); break;
+    case 'marble': for (let i = 0; i < 5; i++) setTimeout(() => tone(2100 + Math.random() * 900, .03, 'square', .028), i * 65 + Math.random() * 30); break;
     case 'huh': seq([300, 420], .1, 'sine'); break;
     case 'win': seq([523, 659, 784, 1046], .14, 'triangle'); break;
     case 'lose': seq([392, 330, 262, 196], .18, 'triangle'); break;
@@ -1117,6 +1174,7 @@ function drawItem(c, id, x, y, s = 1) {
     case 'prunes': rr(c, -7, -6, 14, 18, 3); fs(c, '#5a2a4a', INK, k); rr(c, -4, -12, 8, 6, 1); fs(c, '#5a2a4a', INK, k); rr(c, -6, 0, 12, 6, 1); fs(c, '#efe7d4', INK, 1); break;
     case 'alarmclock': circle(c, 0, 2, 10); fs(c, '#d9442e', INK, k); circle(c, 0, 2, 7); fs(c, '#fbf4df', INK, 1.5); circle(c, -7, -8, 3.5); fs(c, '#c9a227', INK, 1.5); circle(c, 7, -8, 3.5); fs(c, '#c9a227', INK, 1.5); c.strokeStyle = INK; c.lineWidth = 1.5; line(c, 0, 2, 0, -3); line(c, 0, 2, 4, 2); break;
     case 'sausage': c.lineCap = 'round'; c.strokeStyle = INK; c.lineWidth = 11; c.beginPath(); c.arc(0, 12, 16, Math.PI * 1.2, Math.PI * 1.8); c.stroke(); c.strokeStyle = '#c96a55'; c.lineWidth = 7; c.stroke(); c.strokeStyle = 'rgba(255,255,255,.45)'; c.lineWidth = 2; c.beginPath(); c.arc(0, 12, 17, Math.PI * 1.35, Math.PI * 1.6); c.stroke(); break;
+    case 'marbles': ell(c, 0, 4, 12, 10); fs(c, '#9a7a52', INK, k); rr(c, -5, -9, 10, 5, 2); fs(c, '#7a5a3a', INK, k); [['#3b8fd9', -5, 3], ['#d9442e', 4, 6], ['#5e9a3e', 1, -1]].forEach(([col, mx, my]) => { circle(c, mx, my, 3.6); fs(c, col, INK, 1.5); }); break;
     case 'airhorn': rr(c, -11, -3, 10, 14, 3); fs(c, '#d9442e', INK, k); poly(c, [[-1, 0], [10, -8], [10, 14], [-1, 7]]); fs(c, '#c9d0d6', INK, k); break;
     case 'whoopee': ell(c, 0, 2, 13, 9); fs(c, '#e0567a', INK, k); ell(c, -3, -1, 5, 3); c.fillStyle = 'rgba(255,255,255,.5)'; c.fill(); rr(c, 10, -1, 8, 6, 2); fs(c, '#e0567a', INK, k); break;
     case 'banana': c.lineCap = 'round'; c.strokeStyle = INK; c.lineWidth = 9; c.beginPath(); c.arc(0, -10, 16, Math.PI * .25, Math.PI * .8); c.stroke(); c.strokeStyle = '#f2d14b'; c.lineWidth = 5.5; c.stroke(); c.fillStyle = '#5b4232'; circle(c, 11, 1, 2.5); c.fill(); break;
@@ -1921,6 +1979,7 @@ const artSettled = n => ART[n] || !artWanted.has(n) || artFailed.has(n);
 const mapKey = () => Object.keys(MAPS).find(k => MAPS[k] === MAP);
 // load order: the characters and the hall (every day) first, then the location on screen, then everything else
 function artRank(name) {
+  if (prog.outfit && name.startsWith(`outfit-${prog.outfit}-`)) return 0;
   const here = mapKey(), set = ART_SETS[here] || [];
   if (/^(prankster|neighbour)-(idle|creep|work|climb|cheer|caught|walk|reading|glue|wet|shock|rage|catch|slip|flat|sniff|shriek|chilli|swat|ears|soaked)/.test(name) || /^dog-/.test(name) || /^(room-hall|staircase|landing-railing|front-door|yard|house-shell)$/.test(name)) return 0;
   if (set.includes(name) || (ART_EXTRA[here] || []).includes(name) || set.includes(name.replace(/-pranked$/, ''))) return 1;
@@ -2131,7 +2190,8 @@ function drawHat(c, a) {
 function drawPranksterArt(c, P) {
   const moving = P.path.length > 0 && !P.caught, climbing = floorOf(P.y) === -1 && P.x < 300;
   const pose = P.caught ? 'caught' : P.cheer > 0 ? 'cheer' : climbing ? 'climb' : P.work ? 'work' : moving ? 'creep' : 'idle';
-  const sp = spriteFor('prankster-' + pose, 'prankster-idle', 104, P.phase); if (!sp) return false;
+  const pre = prog.outfit && ART[`outfit-${prog.outfit}-idle`] ? `outfit-${prog.outfit}-` : 'prankster-';   // a worn outfit, once its pictures are in
+  const sp = spriteFor(pre + pose, pre + 'idle', 104, P.phase); if (!sp) return false;
   c.save();
   if (P.invuln > 0 && Math.floor(perf * 10) % 2) c.globalAlpha = .45;
   if (!climbing) { ell(c, P.x, P.y, 16, 3.5); fs(c, 'rgba(0,0,0,.25)', null); }
@@ -2361,7 +2421,7 @@ function applyScene(mapKey, key) {
   if (OUT_S) buildOuter();
   initWeather();
 }
-const starTotal = () => LEVELS.reduce((s, L, i) => s + (prog.stars[i] || 0), 0);
+const starTotal = () => LEVELS.reduce((s, L, i) => s + (prog.stars[i] || 0), 0) + Object.keys(prog.ach || {}).length * ACH_STARS;
 // the gadgets you've unlocked, each as a bonus prank on a spot he'll actually use today (or walk over)
 function bonusPranks(L) {
   const visits = new Set(L.routine.map(r => r[0])), have = starTotal(), out = [];
@@ -2376,7 +2436,8 @@ function newGame(i) {
   const L = LEVELS[i];
   applyScene(L.map || 'house', L.theme);
   G = {
-    li: i, L, time: L.time, t: 0, score: 0, chain: 0, combos: 0, lastPrank: -99, strikes: 0, inv: [], over: false, doneAt: null, shake: 0,
+    li: i, L, time: L.time, t: 0, score: 0, chain: 0, combos: 0, lastPrank: -99, strikes: 0, inv: ['marbles'], over: false, doneAt: null, shake: 0,
+    marbles: 3, sel: null, throws: [], newAch: [], ran: false, barked: false, danger: 0, beat: 0,
     items: L.items.map(o => ({ ...o, taken: false })),
     pranks: [...L.pranks.map(id => ({ id, ...PRANKS[id], trigger: PRANKS[id].spot, armed: false, done: false })), ...bonusPranks(L)],
     player: { x: 60, y: FY[0], path: [], target: null, hidden: null, work: null, dir: 1, phase: 0, invuln: 0, caught: false, cheer: 0, pipeNoise: false },
@@ -2439,14 +2500,15 @@ function finishWork() {
     const it = w.obj.it; it.taken = true; G.inv.push(it.id); toast(`Got the ${ITEMS[it.id].toLowerCase()}`); sfx('pick'); renderTray(it.id);
     if (it.x >= 200 && Math.random() < .6) G.missing.push(it);   // taken from inside his house: he may notice it's gone
   }
-  else if (w.kind === 'trap') { w.obj.tr.off = true; toast(`Disarmed: ${TRAP_NAME[w.obj.tr.kind].toLowerCase()}`); sfx('set'); }
+  else if (w.kind === 'trap') { w.obj.tr.off = true; toast(`Disarmed: ${TRAP_NAME[w.obj.tr.kind].toLowerCase()}`); sfx('set'); if (stat('traps') >= 5) award('traps5'); }
   else if (w.kind === 'feed') {
-    const D = G.dog; G.inv.splice(G.inv.indexOf('sausage'), 1); renderTray();
+    const D = G.dog; G.inv.splice(G.inv.indexOf('sausage'), 1); if (!G.inv.includes(G.sel)) G.sel = null; renderTray();
+    award('dog');
     D.state = 'eat'; D.t = 15; D.dir = P.x > D.x ? 1 : -1; sfx('set'); toast('Biscuit is busy with the sausage for 15 seconds. Go!');
     const pack = G.items.find(i => i.id === 'sausage'); if (pack) pack.back = G.t + 8;   // another one turns up in the yard
   }
   else {
-    const pr = w.obj.pr; if (pr.need) G.inv.splice(G.inv.indexOf(pr.need), 1); renderTray(); pr.armed = true; sfx('set'); renderChecklist();
+    const pr = w.obj.pr; if (pr.need) G.inv.splice(G.inv.indexOf(pr.need), 1); if (!G.inv.includes(G.sel)) G.sel = null; renderTray(); pr.armed = true; sfx('set'); renderChecklist();
     if (pr.timer) { pr.fireAt = G.t + pr.timer; toast(`Set: ${pr.name}. Goes off in ${pr.timer} seconds.`); } else toast(`Set: ${pr.name}`);
   }
 }
@@ -2468,7 +2530,54 @@ function nextAct() {
   cur = cur || (() => { const r = R[B.idx++ % R.length]; return { spot: r[0], dur: r[1] }; })();
   B.rush = !!cur.rush; walkTo(cur);
 }
-function say(text, t) { G.br.say = text; G.br.sayT = t; }
+function say(text, t) { G.br.say = text; G.br.sayT = t; voice(text); }
+// A loud noise anywhere nearby (a thrown marble) sends him to look, whichever floor it's on
+function lureTo(x, f, label) {
+  const B = G.br;
+  if (!(B.state === 'walk' || B.state === 'act' || B.state === 'idle') || Math.abs(B.x - x) > 650) return false;
+  if (B.cur && B.state !== 'idle' && !B.cur.investigate) B.queue.unshift(B.state === 'act' ? { ...B.cur, dur: Math.max(1.5, B.t), noSearch: true } : { ...B.cur });
+  walkTo({ x: clamp(x, 214, 1170), f, dur: 2.2, investigate: true, label });
+  say('Huh?! What was that noise?', 1.4); sfx('huh');
+  G.fx.push({ x: B.x, y: B.y - 150, text: '?', t: 0, life: 1.2 });
+  return true;
+}
+/* ---------- pockets: picking an item, throwing marbles ---------- */
+function selectItem(id) {
+  if (!G || mode !== 'play') return;
+  G.sel = G.sel === id ? null : id; renderTray();
+  if (!G.sel) return;
+  if (id === 'marbles') { toast(`Tap where to throw a marble (${G.marbles} left)`); return; }
+  const use = G.pranks.find(p => p.need === id && !p.done && !p.armed);
+  toast(use ? `${ITEMS[id]}: tap a glowing spot to use it` : `${ITEMS[id]}: nothing needs it right now`);
+}
+function throwMarble(p) {
+  const P = G.player, f = p.y < CEIL[0] ? 1 : 0, tx = clamp(p.x, 0, 1190), ty = FY[f];
+  G.sel = null;
+  if (Math.hypot(tx - P.x, ty - P.y) > 560) { renderTray(); toast('Too far: throw it somewhere closer.'); return; }
+  G.marbles--; if (G.marbles <= 0) G.inv.splice(G.inv.indexOf('marbles'), 1);
+  renderTray();
+  G.throws.push({ sx: P.x, sy: P.y - 62, tx, ty, f, t: 0, life: .7, landed: false });
+  if (Math.abs(tx - P.x) > 2) P.dir = Math.sign(tx - P.x);
+  P.cheer = Math.max(P.cheer, .35); sfx('throw');
+}
+function updateThrows(dt) {
+  for (const m of G.throws) {
+    m.t += dt;
+    if (!m.landed && m.t >= m.life) {
+      m.landed = true; sfx('marble'); G.fx.push({ x: m.tx, y: m.ty - 30, text: 'CLACK-CLACK!', t: 0, life: 1, small: true });
+      if (lureTo(m.tx, m.f, 'Who threw that?')) award('lure');
+    }
+  }
+  G.throws = G.throws.filter(m => m.t < m.life + .6);
+}
+function drawThrows(c) {
+  for (const m of G.throws) {
+    const u = Math.min(1, m.t / m.life);
+    let x = m.sx + (m.tx - m.sx) * u, y = m.sy + (m.ty - m.sy) * u - Math.sin(Math.PI * u) * 90;
+    if (m.landed) { const b = (m.t - m.life) / .6; x = m.tx + b * 26; y = m.ty - 3 - Math.abs(Math.sin(b * 9)) * 10 * (1 - b); }
+    [['#3b8fd9', 0, 0], ['#d9442e', -6, 3], ['#5e9a3e', 5, 4]].forEach(([col, dx, dy]) => { circle(c, x + dx, y + dy, 3.6); fs(c, col, INK, 1.5); });
+  }
+}
 function emitNoise(x, f) {
   const B = G.br;
   if (!(B.state === 'walk' || B.state === 'act')) return;
@@ -2508,7 +2617,7 @@ function updateDog(dt) {
 }
 function dogBark() {
   const D = G.dog, B = G.br;
-  D.state = 'bark'; D.t = 1.6; D.cool = 8; sfx('bark');
+  D.state = 'bark'; D.t = 1.6; D.cool = 8; sfx('bark'); G.barked = true; buzz([60, 80, 60]);
   G.fx.push({ x: D.x, y: FY[D.f] - 72, text: 'WOOF! WOOF!', t: 0, life: 1.4 });
   if (B.state !== 'walk' && B.state !== 'act' && B.state !== 'idle') return;   // he's busy reacting to a prank
   if (B.cur && B.state !== 'idle' && !B.cur.investigate) B.queue.unshift(B.state === 'act' ? { ...B.cur, dur: Math.max(1.5, B.t), noSearch: true } : { ...B.cur });
@@ -2566,7 +2675,7 @@ function fireOne(pr) {
   B.state = 'react'; B.reactFam = pr.fam; B.reactRage = rage || !!combo;
   B.t = REACT_TIME[pr.fam] + (combo ? .8 : 0) + (rage ? 1 : 0);
   B.reactPose = REACT_POSE[pr.id] || FAM_POSE[pr.fam] || null;
-  if (B.reactPose === 'slip') B.t += 1.2;   // time to land and lie there
+  if (B.reactPose === 'slip') { B.t += 1.2; if (stat('slips') >= 10) award('slip10'); }   // time to land and lie there
   B.reactLen = B.t;
   say(pr.say, B.t);
   G.fxAt[pr.spot] = 1.6;
@@ -2587,6 +2696,11 @@ function fireOne(pr) {
   else if (G.chain > 0) toast(`Chain x${1 + G.chain * .5}!`);
   sfx(pr.fam);
   if (pr.spot === 'switch') setTimeout(() => sfx('bell'), 250);
+  buzz(combo ? [40, 60, 40] : 40);
+  award('first');
+  if (G.combos >= 3) award('combo3');
+  if (G.chain >= 2) award('chain');
+  if (B.anger === 3) award('furious');
   renderChecklist(); updateHud(true);
 }
 /* ---------- prank animations ----------
@@ -2711,7 +2825,7 @@ function startCatch() {
   B.resume = { state: B.state, t: B.t };
   B.state = 'catch'; B.t = 1.5; B.dir = Math.sign(P.x - B.x) || 1; say('GOTCHA! Get OUT!', 1.5);
   P.caught = true; P.work = null; P.path = []; P.target = null; P.hidden = null;
-  G.shake = .25; sfx('caught');
+  G.shake = .25; sfx('caught'); buzz(300);
 }
 function endCatch() {
   const B = G.br, P = G.player;
@@ -2734,7 +2848,17 @@ function update(dt) {
   if (!P.caught) {
     if (P.work) { P.work.t += dt; if (P.work.t >= P.work.total) { if (P.work.kind === 'stun') P.work = null; else finishWork(); } }
     else if (P.path.length) {
-      stepPath(P, 128, dt); P.phase += dt * 11;
+      stepPath(P, P.run ? 215 : 128, dt); P.phase += dt * (P.run ? 17 : 11);
+      if (P.run) {   // running: quick but loud. Footsteps carry along the floor he's on
+        const f = floorOf(P.y);
+        P.stepT = (P.stepT || 0) - dt;
+        if (f >= 0 && roomAt(P.x, P.y) !== 'yard') {
+          G.ran = true;
+          if (P.stepT <= 0) { P.stepT = 1.1; emitNoise(P.x, f); G.fx.push({ x: P.x, y: P.y - 20, text: 'thud thud', t: 0, life: .8, small: true }); }
+        }
+        if (f >= 0 && Math.random() < dt * 14) G.parts.push({ x: P.x - P.dir * 10, y: P.y - 3, vx: -P.dir * 30, vy: -40, life: .4, t: 0, col: 'rgba(205,195,175,.85)', r: 3 });
+      }
+      if (!P.path.length) P.run = false;
       if (!P.path.length && P.target) { const t = P.target; P.target = null; interact(t); }
     }
     if (floorOf(P.y) === -1 && P.x < 300) { if (!P.pipeNoise) { P.pipeNoise = true; emitNoise(214, 1); } } else P.pipeNoise = false;
@@ -2751,6 +2875,7 @@ function update(dt) {
     G.fx.push({ x: s.x, y: FY[s.f] - s.mh - 30, text: pr.fx, t: 0, life: 1.3 });
   }
   updateDog(dt);
+  updateThrows(dt);
   for (const tr of G.traps) {
     tr.cool = Math.max(0, tr.cool - dt);
     if (tr.off || tr.cool > 0 || P.caught || P.hidden || floorOf(P.y) !== tr.f || Math.abs(P.x - tr.x) > 9) continue;
@@ -2820,6 +2945,12 @@ function update(dt) {
     if (pr !== 'yard' && pr === roomAt(B.x, B.y) && (!dark || Math.abs(P.x - B.x) < 140)) { B.seen += dt; if (B.seen > .35) startCatch(); }
     else B.seen = 0;
   } else B.seen = 0;
+  {   // danger: he's in your room, or about to walk through it. A red glow at the screen's edge and a heartbeat
+    const pr = roomAt(P.x, P.y), br = roomAt(B.x, B.y);
+    const on = !P.hidden && !P.caught && pr !== 'yard' && (pr === br || (B.state === 'walk' && pathRooms(B).has(pr)));
+    G.danger += ((on ? 1 : 0) - G.danger) * Math.min(1, dt * 4);
+    G.beat -= dt; if (on && G.beat <= 0) { G.beat = pr === br ? .55 : .85; sfx('heart'); }
+  }
   for (const f of G.fx) f.t += dt;
   G.fx = G.fx.filter(f => f.t < f.life);
   if (G.panel) { G.panel.t += dt; if (G.panel.t > G.panel.life) G.panel = null; }
@@ -2889,6 +3020,10 @@ function drawMarkers(c) {
       else { c.fillStyle = '#6b5a52'; c.font = `${Math.round(13 * z)}px "Bangers", Impact, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('?', x, y + 1); }
       c.globalAlpha = 1;
     }
+    if (G.sel && pr.need === G.sel && !pr.done && !pr.armed) {   // the picked pocket item: a dashed ring round every spot that takes it
+      const z = Math.max(1, .75 / cam.z);
+      c.save(); circle(c, x, y, 22 * z * (1 + Math.sin(perf * 6) * .12)); c.setLineDash([6 * z, 5 * z]); c.strokeStyle = '#f5c400'; c.lineWidth = 4 * z; c.stroke(); c.restore();
+    }
   }
 }
 // Comic close-up: a framed panel slides in with his face, the sound word and what he shouted.
@@ -2933,13 +3068,28 @@ function drawPanel() {
   c.fillStyle = '#b02a1a'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(pr.say, w - sayW / 2 - 4, h - 17, sayW - 8);
   c.restore();
 }
+function drawDanger() {
+  const k = G.danger; if (k < .03) return;
+  const a = k * (.34 + .14 * Math.sin(perf * 9));
+  const g = ctx.createRadialGradient(VW / 2, VH / 2, Math.min(VW, VH) * .32, VW / 2, VH / 2, Math.max(VW, VH) * .7);
+  g.addColorStop(0, 'rgba(217,68,46,0)'); g.addColorStop(1, `rgba(217,68,46,${a})`);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
+}
 function drawEdgeMarker() {
-  // when he's off screen, a red face on the edge points to him
+  // when he's off screen, his painted face on the edge points to him; it turns red when he's heading your way
   const B = G.br, bx = (B.x - cam.x) * cam.z + VW / 2, by = (B.y - 50 - cam.y) * cam.z + VH / 2;
   if (bx > 0 && bx < VW && by > 0 && by < VH) return;
-  const top = appMode ? 66 : 24, ex = clamp(bx, 26, VW - 26), ey = clamp(by, top, VH - 26 - PAD_BOT()), a = Math.atan2(by - ey, bx - ex);
-  ctx.save(); ctx.translate(ex, ey);
-  ctx.save(); ctx.rotate(a); poly(ctx, [[16, -7], [27, 0], [16, 7]]); fs(ctx, '#d9442e', INK, 2.5); ctx.restore();
+  const top = appMode ? 70 : 28, ex = clamp(bx, 30, VW - 30), ey = clamp(by, top, VH - 30 - PAD_BOT()), a = Math.atan2(by - ey, bx - ex);
+  const face = ART['neighbour-face-' + (B.anger >= 2 ? 'rage' : 'shock')], hot = G.danger > .4, k = hot ? 1 + Math.sin(perf * 10) * .08 : 1;
+  ctx.save(); ctx.translate(ex, ey); ctx.scale(k, k);
+  ctx.save(); ctx.rotate(a); poly(ctx, [[19, -8], [32, 0], [19, 8]]); fs(ctx, '#d9442e', INK, 2.5); ctx.restore();
+  if (face) {
+    circle(ctx, 0, 0, 20); fs(ctx, hot ? '#d9442e' : '#fbf4df', INK, 3);
+    ctx.save(); circle(ctx, 0, 0, 16.5); ctx.clip();
+    const s = 46 / (face.y1 - face.y0), cx = (face.x0 + face.x1) / 2, cy = face.y0 + (face.y1 - face.y0) * .45;
+    ctx.drawImage(face.img, -cx * s, -cy * s, face.img.width * s, face.img.height * s);
+    ctx.restore(); ctx.restore(); return;
+  }
   circle(ctx, 0, 0, 15); fs(ctx, SKIN[B.anger], INK, 3);
   ctx.fillStyle = INK; circle(ctx, -5, -2, 2); ctx.fill(); circle(ctx, 5, -2, 2); ctx.fill();
   ctx.lineWidth = 2.5; line(ctx, -8, -8, -2, -5); line(ctx, 8, -8, 2, -5);
@@ -2983,6 +3133,7 @@ function render() {
   if (hover && mode === 'play') { ctx.strokeStyle = 'rgba(245,196,0,.95)'; ctx.setLineDash([6, 5]); ctx.lineWidth = 3; ell(ctx, hover.x, FY[hover.f] + 2, 26, 6); ctx.stroke(); ctx.setLineDash([]); }
   if (!drawGeraldArt(ctx, B)) drawTarget(ctx, B);
   drawDog(ctx);
+  drawThrows(ctx);
   // blackout: dark room with a torch-sized hole around him
   for (const { id: room } of MAP.rooms) {
     const d = G.dark[room] || 0; if (d <= 0) continue;
@@ -3030,7 +3181,7 @@ function render() {
   ctx.restore();
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   if (flash > 0) { ctx.fillStyle = `rgba(235,240,255,${Math.min(.75, flash * 1.8) * (Math.sin(perf * 60) > -.3 ? 1 : .3)})`; ctx.fillRect(0, 0, VW, VH); }
-  if (mode === 'play') { drawEdgeMarker(); drawPanel(); }
+  if (mode === 'play') { drawDanger(); drawEdgeMarker(); drawPanel(); }
   if (paused && mode === 'play') {
     const s = Math.min(VW, VH);
     ctx.fillStyle = 'rgba(20,12,8,.6)'; ctx.fillRect(0, 0, VW, VH);
@@ -3067,6 +3218,7 @@ function snapPrank(s) {
   album[s.pr.id] = { img: cnv.toDataURL('image/jpeg', .72), day: G.li + 1, combo: !!s.combo };
   try { localStorage.setItem('dd-album', JSON.stringify(album)); } catch (e) {}
   if (!old) setTimeout(() => { if (mode === 'play') toast('📸 New photo in your album!'); }, 1600);
+  checkPhotos();
 }
 // every prank in the game, grouped by where it happens
 function albumEntries() {
@@ -3191,15 +3343,77 @@ function openPhoto(p, ph) {
 function rewardIcon(cv, r) {
   const c = cv.getContext('2d'); cv.width = cv.height = 128; c.clearRect(0, 0, 128, 128);
   if (r.kind === 'gadget') { drawItem(c, r.id, 64, 66, 3.6); return; }
-  const a = ART[r.id];
+  const a = ART[r.kind === 'outfit' ? r.id + '-idle' : r.id];
   if (a) { const w = a.x1 - a.x0, h = a.y1 - a.y0, s = Math.min(108 / w, 108 / h); c.drawImage(a.img, a.x0, a.y0, w, h, 64 - w * s / 2, 64 - h * s / 2, w * s, h * s); }
   else { c.fillStyle = 'rgba(27,18,16,.55)'; c.font = '20px "Permanent Marker", sans-serif'; c.textAlign = 'center'; c.fillText('painting', 64, 58); c.fillText('coming', 64, 82); }
 }
+/* ---------- achievements ----------
+   Each one is earned once, kept on this device, and adds two stars toward the rewards. */
+const ACH_STARS = 2;
+const ACH = [
+  { id: 'first', name: 'First prank', desc: 'Land your first prank.' },
+  { id: 'combo3', name: 'Combo king', desc: 'Score 3 combos in one day.' },
+  { id: 'chain', name: 'Chain reaction', desc: 'Land 3 pranks in a row, quickly.' },
+  { id: 'furious', name: 'Seeing red', desc: 'Make Gerald furious.' },
+  { id: 'ghost', name: 'Ghost', desc: 'Finish a day without being caught.' },
+  { id: 'speedy', name: 'In and out', desc: 'Finish a day with 1:30 or more left.' },
+  { id: 'bonus', name: 'Overachiever', desc: 'Finish a day with every bonus prank done.' },
+  { id: 'sneaky', name: 'Light feet', desc: 'Finish a day without running.' },
+  { id: 'slip10', name: 'Slippery floors', desc: 'Make Gerald slip 10 times.' },
+  { id: 'photos20', name: 'Shutterbug', desc: 'Get 20 photos in your album.' },
+  { id: 'photosAll', name: 'Full album', desc: 'Get every photo in the album.' },
+  { id: 'dog', name: 'Good boy', desc: 'Feed Biscuit a sausage.' },
+  { id: 'dogQuiet', name: 'Shh, Biscuit', desc: 'Finish a Biscuit day without him barking.' },
+  { id: 'lure', name: 'Sharpshooter', desc: 'Lure Gerald with a thrown marble.' },
+  { id: 'traps5', name: 'Trap spotter', desc: "Disarm 5 of Gerald's traps." },
+  { id: 'hat', name: 'Dressed for crime', desc: 'Wear a hat.' },
+  { id: 'house', name: 'House wrecker', desc: 'Get 3 stars on every house day.' },
+  { id: 'garage', name: 'Grease monkey', desc: 'Get 3 stars on every garage day.' },
+  { id: 'beach', name: 'Beach bum', desc: 'Get 3 stars on every chalet day.' },
+  { id: 'all', name: 'The whole feud', desc: 'Finish all 16 days.' },
+];
+function award(id) {
+  prog.ach = prog.ach || {};
+  if (prog.ach[id]) return;
+  const a = ACH.find(x => x.id === id); if (!a) return;
+  prog.ach[id] = Date.now(); saveProg();
+  if (G && mode === 'play') G.newAch.push(a.name);
+  toast(`🏆 ${a.name}! +${ACH_STARS} stars`); sfx('combo');
+}
+function stat(k) { prog.stats = prog.stats || {}; prog.stats[k] = (prog.stats[k] || 0) + 1; saveProg(); return prog.stats[k]; }
+function dayAchievements() {
+  if (G.strikes === 0) award('ghost');
+  if (G.time >= 90) award('speedy');
+  const bon = G.pranks.filter(p => p.bonus); if (bon.length && bon.every(p => p.done)) award('bonus');
+  if (G.L.dog && !G.barked) award('dogQuiet');
+  if (!G.ran) award('sneaky');
+  const all3 = m => LEVELS.every((L, i) => (L.map || 'house') !== m || prog.stars[i] === 3);
+  for (const m of ['house', 'garage', 'beach']) if (all3(m)) award(m);
+  if (LEVELS.every((L, i) => prog.stars[i] > 0)) award('all');
+}
+function checkPhotos() {
+  const n = Object.keys(album).length, total = albumEntries().reduce((s, g) => s + g.items.length, 0);
+  if (n >= 20) award('photos20');
+  if (n >= total) award('photosAll');
+}
+function renderAch() {
+  const grid = $('achGrid'), got = prog.ach || {}; grid.innerHTML = '';
+  for (const a of ACH) {
+    const d = document.createElement('div'); d.className = 'ach' + (got[a.id] ? ' got' : '');
+    const i = document.createElement('i'); i.textContent = got[a.id] ? '🏆' : '🔒';
+    const b = document.createElement('b'); b.textContent = a.name;
+    const s = document.createElement('span'); s.textContent = `${a.desc} +${ACH_STARS}★`;
+    d.append(i, b, s); grid.appendChild(d);
+  }
+  $('achCount').textContent = `${Object.keys(got).length} / ${ACH.length}`;
+}
 function openRewards() {
   const have = starTotal(), grid = $('rwGrid'); grid.innerHTML = '';
-  const list = [...Object.entries(GADGETS).map(([id, g]) => ({ ...g, id, kind: 'gadget' })), ...HATS.map(h => ({ ...h, kind: 'hat', desc: 'A hat for the Prankster to wear on every day.' }))].sort((a, b) => a.stars - b.stars);
+  const list = [...Object.entries(GADGETS).map(([id, g]) => ({ ...g, id, kind: 'gadget' })), ...HATS.map(h => ({ ...h, kind: 'hat', desc: 'A hat for the Prankster to wear on every day.' })),
+    ...OUTFITS.map(o => ({ ...o, id: 'outfit-' + o.id, key: o.id, kind: 'outfit', desc: 'A whole new look for the Prankster.' }))].sort((a, b) => a.stars - b.stars);
   list.forEach((r, i) => {
-    const open = have >= r.stars, worn = r.kind === 'hat' && prog.hat === r.id, wearable = r.kind === 'hat' && open && ART[r.id];
+    const pic = r.kind === 'outfit' ? r.id + '-idle' : r.id, open = have >= r.stars;
+    const worn = r.kind === 'hat' ? prog.hat === r.id : r.kind === 'outfit' && prog.outfit === r.key, wearable = r.kind !== 'gadget' && open && ART[pic];
     const card = document.createElement(wearable ? 'button' : 'div');
     card.className = 'rw-card' + (open ? ' open' : ' locked') + (worn ? ' worn' : '');
     card.style.setProperty('--r', `${[-1, 1, -.5, .8][i % 4]}deg`);
@@ -3208,12 +3422,19 @@ function openRewards() {
     const b = document.createElement('b'); b.textContent = r.name;
     const sp = document.createElement('span'); sp.textContent = r.desc;
     const tag = document.createElement('i');
-    tag.textContent = !open ? `★ ${r.stars} to unlock` : r.kind === 'gadget' ? 'In your pocket every day' : worn ? 'Wearing · tap to remove' : ART[r.id] ? 'Tap to wear' : 'Unlocked · art coming';
+    tag.textContent = !open ? `★ ${r.stars} to unlock` : r.kind === 'gadget' ? 'In your pocket every day' : worn ? 'Wearing · tap to remove' : ART[pic] ? 'Tap to wear' : 'Unlocked · art coming';
     txt.append(b, sp, tag); card.append(cv, txt);
-    if (wearable) { card.type = 'button'; card.addEventListener('click', () => { prog.hat = worn ? null : r.id; saveProg(); openRewards(); }); }
+    if (wearable) {
+      card.type = 'button';
+      card.addEventListener('click', () => {
+        if (r.kind === 'hat') { prog.hat = worn ? null : r.id; if (prog.hat) award('hat'); } else prog.outfit = worn ? null : r.key;
+        saveProg(); openRewards();
+      });
+    }
     grid.appendChild(card);
   });
-  $('rwStars').textContent = `★ ${have} / ${LEVELS.length * 3}`;
+  $('rwStars').textContent = `★ ${have} / ${LEVELS.length * 3 + ACH.length * ACH_STARS}`;
+  renderAch();
   show('rewards'); $('rwBack').focus();
 }
 
@@ -3246,7 +3467,7 @@ function renderTray(fresh) {
   // on a phone the pockets show only what you carry (and hide when empty); tap one to see its name
   const tray = $('tray'); tray.innerHTML = '';
   tray.parentElement.classList.toggle('empty', !G.inv.length);
-  for (let i = 0; i < (appMode ? G.inv.length : Math.max(6, G.inv.length)); i++) {
+  for (let i = 0; i < (appMode ? G.inv.length : Math.max(8, G.inv.length)); i++) {
     const s = document.createElement('div'); s.className = 'slot';
     const id = G.inv[i];
     if (id) {
@@ -3254,7 +3475,9 @@ function renderTray(fresh) {
       drawItem(c.getContext('2d'), id, 48, 50, 2.6);
       const n = document.createElement('span'); n.textContent = ITEMS[id];
       s.append(c, n); s.title = ITEMS[id];
-      s.addEventListener('click', () => toast(ITEMS[id]));
+      s.addEventListener('click', () => selectItem(id));
+      if (G.sel === id) s.classList.add('sel');
+      if (id === 'marbles') { const em = document.createElement('em'); em.textContent = G.marbles; s.appendChild(em); }
       if (id === fresh && i === G.inv.length - 1) s.classList.add('new');
     }
     tray.appendChild(s);
@@ -3286,13 +3509,26 @@ function renderLevels() {
     box.appendChild(b);
   });
 }
-const OVERLAYS = ['menu', 'levels', 'options', 'how', 'brief', 'results', 'album', 'photo', 'rewards', 'story'];
+const OVERLAYS = ['menu', 'levels', 'options', 'how', 'brief', 'results', 'album', 'photo', 'rewards', 'story', 'loading'];
+// The loading screen: a progress bar until the characters and the house's paintings are in (or 20 seconds), then the menu
+function startLoading() {
+  mode = 'menu'; show('loading');
+  const t0 = performance.now(), lines = ['Painting the neighbourhood...', 'Hiding the super glue...', 'Waking up Gerald...', 'Feeding Biscuit...'];
+  const finish = () => { clearInterval(tick); if (!$('loading').hidden) openMenu(); };
+  const tick = setInterval(() => {
+    const need = [...artWanted].filter(n => artRank(n) <= 1), done = need.filter(artSettled).length;
+    const k = need.length ? done / need.length : 0, el = performance.now() - t0;
+    $('loadFill').style.width = `${Math.round(k * 100)}%`;
+    $('loadText').textContent = `${lines[Math.floor(el / 1800) % lines.length]} ${Math.round(k * 100)}%`;
+    if ((need.length && done >= need.length) || el > 20000) setTimeout(finish, 250);
+  }, 120);
+  $('loadSkip').onclick = finish;
+}
 function show(id) { for (const o of OVERLAYS) $(o).hidden = o !== id; document.documentElement.classList.toggle('in-menu', !!id); }
 function openMenu() {
   mode = 'menu'; setPaused(false); show('menu');
   cam.mode = 'fit'; cam.manual = false;   // the whole house behind the title
-  const got = LEVELS.reduce((s, L, i) => s + (prog.stars[i] || 0), 0);
-  $('mStars').textContent = `★ ${got} / ${LEVELS.length * 3} stars`;
+  $('mStars').textContent = `★ ${starTotal()} / ${LEVELS.length * 3 + ACH.length * ACH_STARS} stars`;
   drawMenuArt(); $('mStart').focus();
 }
 // the two painted characters on the title screen, redrawn as their pictures arrive
@@ -3359,7 +3595,7 @@ function endLevel(reason) {
   const stars = reason === 'clear' ? starsFor(G.time) : 0;
   if (reason === 'clear') G.score += Math.max(0, Math.round(G.time)) * 5;
   const passed = stars > 0;
-  if (passed) { prog.stars[G.li] = Math.max(prog.stars[G.li] || 0, stars); prog.unlocked = Math.max(prog.unlocked, Math.min(LEVELS.length, G.li + 2)); saveProg(); }
+  if (passed) { prog.stars[G.li] = Math.max(prog.stars[G.li] || 0, stars); prog.unlocked = Math.max(prog.unlocked, Math.min(LEVELS.length, G.li + 2)); saveProg(); dayAchievements(); }
   const starsAfter = starTotal(), unlocked = [...Object.values(GADGETS), ...HATS].filter(r => r.stars > starsBefore && r.stars <= starsAfter).map(r => r.name);
   updateHud(true);
   setTimeout(() => {
@@ -3369,7 +3605,7 @@ function endLevel(reason) {
     const timing = G.time >= 0 ? `with ${fmt(G.time)} left` : `${fmt(-G.time)} into overtime`;
     $('resText').textContent = reason === 'busted'
       ? `He caught you three times and called your mum. You'd done ${done} of ${own.length} deeds. Watch his thought bubble and hide sooner.`
-      : `All ${own.length} dirty deeds done ${timing}` + (bonusDone ? `, plus ${bonusDone} bonus` : '') + `. ${G.combos} combo${G.combos === 1 ? '' : 's'}, ${G.score} points.` + (stars < 3 ? ' Finish with 30 seconds left for 3 stars.' : '') + (unlocked.length ? ` Unlocked: ${unlocked.join(', ')}! See Rewards.` : '');
+      : `All ${own.length} dirty deeds done ${timing}` + (bonusDone ? `, plus ${bonusDone} bonus` : '') + `. ${G.combos} combo${G.combos === 1 ? '' : 's'}, ${G.score} points.` + (stars < 3 ? ' Finish with 30 seconds left for 3 stars.' : '') + (unlocked.length ? ` Unlocked: ${unlocked.join(', ')}! See Rewards.` : '') + (G.newAch.length ? ` Achievements: ${G.newAch.join(', ')}!` : '');
     const ul = $('resList'); ul.innerHTML = '';
     for (const pr of G.pranks) { if (pr.bonus && !pr.done) continue; const li = document.createElement('li'); li.className = pr.done ? '' : 'miss'; li.textContent = (pr.done ? '✓ ' : '✗ ') + (pr.bonus ? 'Bonus: ' : '') + pr.name; ul.appendChild(li); }
     G.after = passed ? storyAfter(G.li) : [];   // a comic strip comes next the first time a chapter ends
@@ -3386,10 +3622,17 @@ function toWorld(e) { const r = cv.getBoundingClientRect(); return { x: (e.clien
 // One finger: tap to act, drag to look around. Two fingers: pinch to zoom.
 const ptrs = new Map();
 let gesture = null, touchHoverUntil = 0;
+let lastTap = { t: 0, x: 0, y: 0 }, toldRun = false;
 function tapAt(e) {
   if (mode !== 'play' || paused || !G || G.player.caught) return;
-  const p = toWorld(e), t = pick(p);
+  const p = toWorld(e);
+  if (G.sel === 'marbles') { throwMarble(p); return; }
+  // a second tap in the same place within a moment turns the walk into a run
+  const t = pick(p), now = performance.now(), dbl = now - lastTap.t < 330 && Math.hypot(p.x - lastTap.x, p.y - lastTap.y) < 70 / cam.z;
+  lastTap = { t: dbl ? 0 : now, x: p.x, y: p.y };
   if (t) goTo(t.x, t.f, t); else goTo(p.x, p.y < CEIL[0] ? 1 : 0, null);
+  G.player.run = dbl;
+  if (dbl && !toldRun) { toldRun = true; toast('Running! Faster, but he can hear your footsteps.'); }
   cam.manual = false;
   if (e.pointerType !== 'mouse' && t) { hover = t; touchHoverUntil = perf + 1.8; }
 }
@@ -3463,6 +3706,12 @@ function toggleMusic() {
   $('pmMusic').textContent = musicOn ? 'Music: on' : 'Music: off'; $('pmMusic').setAttribute('aria-pressed', musicOn);
 }
 $('optMusic').addEventListener('click', toggleMusic);
+$('optVibe').hidden = !navigator.vibrate;
+$('optVibe').textContent = vibeOn ? 'Vibration: on' : 'Vibration: off';
+$('optVibe').addEventListener('click', () => {
+  vibeOn = !vibeOn; try { localStorage.setItem('dd-vibe', vibeOn ? '1' : '0'); } catch (e) {}
+  $('optVibe').textContent = vibeOn ? 'Vibration: on' : 'Vibration: off'; buzz(60);
+});
 $('optFull').hidden = !document.fullscreenEnabled;
 $('optFull').addEventListener('click', goFullscreen);
 $('mStart').addEventListener('click', () => {   // the first unlocked day without a star, else the latest one
@@ -3564,7 +3813,7 @@ function loop(now) {
 }
 newGame(0);
 $('dayName').textContent = 'Pick a day';
-openMenu();
+startLoading();
 loadArt();
 requestAnimationFrame(loop);
 })();
