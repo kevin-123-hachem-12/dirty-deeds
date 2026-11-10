@@ -60,12 +60,16 @@ body{background:#8fb0c6;color:var(--chalk);font-family:var(--hand);font-size:17p
 .board{background:var(--board);border:5px solid var(--wood-dark);outline:3px solid var(--ink);border-radius:4px;padding:3px 12px;font-family:var(--sign);color:var(--chalk);text-align:center;line-height:1.05;transform:rotate(-1deg)}
 .board small{display:block;font-size:11px;opacity:.75}
 .board strong{font-size:22px;font-weight:400;font-variant-numeric:tabular-nums}
-.nails{display:flex;gap:6px;padding:6px 10px;align-items:flex-end}
-.nail{width:10px;height:28px;position:relative;transition:transform .3s}
-.nail::before{content:"";position:absolute;left:3px;top:6px;width:4px;height:22px;background:linear-gradient(90deg,#8d959c,#d7dde2,#8d959c);border:1px solid var(--ink)}
-.nail::after{content:"";position:absolute;left:-1px;top:0;width:12px;height:6px;border-radius:2px;background:#aab2b8;border:1.5px solid var(--ink)}
-.nail.used{transform:translateY(12px) rotate(78deg)}
-.nail.used::after{background:var(--red)}
+/* chances left: three hearts that empty when he catches you */
+.hearts{display:flex;gap:4px;padding:6px 9px;align-items:center}
+.heart{display:block;width:24px;height:22px;transition:transform .35s,opacity .35s}
+.heart svg{display:block;width:100%;height:100%;overflow:visible}
+.heart path{fill:var(--red);stroke:var(--ink);stroke-width:2;stroke-linejoin:round}
+.heart.used{opacity:.5;transform:scale(.8) rotate(-12deg)}
+.heart.used path{fill:#4a3a33;stroke-dasharray:3 2}
+.clock .pts{font-family:var(--sign);font-size:.55em;letter-spacing:0;color:#fff7e6;border-left:2px solid rgba(27,18,16,.45);padding-left:8px;margin-left:2px;white-space:nowrap}
+.clock .pts b{font-weight:400;color:var(--yellow);font-variant-numeric:tabular-nums}
+.app-spacer{display:none}
 .clock{display:flex;align-items:center;gap:6px;padding:4px 12px 4px 8px;font-family:var(--shout);font-size:28px;letter-spacing:1px;font-variant-numeric:tabular-nums;transform:rotate(-1deg)}
 .clock.low{color:#ffb4a6;animation:ring .35s infinite}
 .tier{font-family:var(--sign);font-size:15px;letter-spacing:1px;color:var(--yellow);line-height:1}
@@ -153,7 +157,7 @@ li.done .fam{opacity:.4}
   .logo{font-size:34px}
   .slots{grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}
 }
-@media (prefers-reduced-motion:reduce){.clock.low{animation:none}.sign,.nail{transition:none}}
+@media (prefers-reduced-motion:reduce){.clock.low{animation:none}.sign,.heart{transition:none}}
 .app-only{display:none!important}
 .closeList{position:absolute;top:8px;right:10px}
 /* title screen: the painted house at dusk behind, the Prankster creeping in on the left, Gerald raging on the right,
@@ -248,36 +252,39 @@ html.app .stage{position:absolute;inset:0;border:0;border-radius:0;box-shadow:no
 html.app canvas#game{width:100%;height:100%;aspect-ratio:auto;touch-action:none}
 html.app .hud{position:absolute;z-index:5;top:0;left:0;right:0;flex-wrap:nowrap;gap:6px;padding:max(6px,env(safe-area-inset-top,0px)) max(8px,env(safe-area-inset-right,0px)) 10px max(8px,env(safe-area-inset-left,0px));background:linear-gradient(rgba(27,18,16,.8),rgba(27,18,16,0));pointer-events:none}
 html.app .hud>*{pointer-events:auto}
-html.app .hud .logo,html.app .hud .day{display:none}
+html.app .hud .logo,html.app .hud .day,html.app .desk-spacer{display:none}
+html.app .app-spacer{display:block}
 @media (orientation:portrait){html.app .hud{flex-wrap:wrap;row-gap:6px}html.app .hud .spacer{display:none}}
 @media (min-width:1100px) and (min-height:600px){
   html.app .hud .logo{display:block;font-size:34px;margin-right:6px}
   html.app .gauge svg{width:60px;height:36px}
   html.app .gauge .lab{font-size:12px}
   html.app .gauge .lab b{font-size:15px}
-  html.app .board strong{font-size:20px}
-  html.app .clock{font-size:24px}
+  html.app .clock{font-size:22px}
   html.app .small-sign{font-size:14px;padding:6px 12px}
-  html.app .slots{grid-template-columns:repeat(6,48px)}
+  html.app .slot{width:48px}
 }
-html.app .gauge{padding:2px 6px 2px 4px;gap:3px}
-html.app .gauge svg{width:46px;height:28px}
+/* phone: two compact groups, the day's state on the left and the buttons on the right */
+html.app .plank{border-width:2px;box-shadow:0 2px 0 var(--ink)}
+html.app .gauge{padding:1px 5px 1px 3px;gap:3px}
+html.app .gauge svg{width:36px;height:22px}
 html.app .gauge .lab{min-width:0;font-size:0}
-html.app .gauge .lab b{font-size:12px}
-html.app .board{padding:0 7px;border-width:3px}
-html.app .board small{display:none}
-html.app .board strong{font-size:16px}
-html.app .nails{padding:3px 6px;gap:3px}
-html.app .nail{transform:scale(.75)}
-html.app .nail.used{transform:scale(.75) translateY(12px) rotate(78deg)}
-html.app .clock{font-size:19px;padding:2px 8px 2px 5px;gap:4px}
-html.app .clock svg{width:17px;height:17px}
-html.app .small-sign{font-size:12px;padding:5px 9px;border-width:2px;box-shadow:0 2px 0 var(--ink)}
+html.app .gauge .lab b{font-size:11px}
+html.app .hearts{padding:3px 5px;gap:2px}
+html.app .heart{width:15px;height:14px}
+html.app .clock{font-size:16px;padding:1px 7px 1px 4px;gap:4px}
+html.app .clock svg{width:14px;height:14px}
+html.app .clock .pts{padding-left:6px}
+html.app .small-sign{font-size:11px;padding:4px 8px;border-width:2px;box-shadow:0 2px 0 var(--ink)}
+html.app .hud .gear{padding:3px 5px}
+html.app .hud .gear svg{width:17px;height:17px}
 html.app .toast{top:max(48px,calc(env(safe-area-inset-top,0px) + 44px));font-size:13px}
 html.app .below{position:absolute;z-index:5;left:max(8px,env(safe-area-inset-left,0px));bottom:max(6px,env(safe-area-inset-bottom,0px));display:block;pointer-events:none}
 html.app .shelf{padding:4px 5px;pointer-events:auto;box-shadow:0 3px 0 var(--ink)}
 html.app .shelf h3,html.app .shelf.tape::after{display:none}
-html.app .slots{grid-template-columns:repeat(6,36px);gap:4px}
+html.app .slots{display:flex;gap:4px}
+html.app .slot{width:36px;cursor:pointer}
+html.app .shelf.empty{display:none}
 html.app .slot{border-width:2px}
 html.app .slot span{display:none}
 html.app .below .page{display:none}
@@ -317,7 +324,7 @@ html.app .below .page.open .checklist{grid-template-columns:minmax(0,1fr)}
   <header class="hud">
     <div class="logo">Dirty Deeds</div>
     <div class="plank day tape" id="dayName">Pick a day</div>
-    <div class="spacer"></div>
+    <div class="spacer desk-spacer"></div>
     <div class="plank gauge" title="His temper. Angrier means faster, and at Furious he searches hiding spots">
       <svg viewBox="0 0 100 60" width="78" height="47" aria-hidden="true">
         <circle cx="50" cy="52" r="46" fill="#efe6cf" stroke="#1b1210" stroke-width="3"/>
@@ -329,9 +336,9 @@ html.app .below .page.open .checklist{grid-template-columns:minmax(0,1fr)}
       </svg>
       <div class="lab">Temper<b id="moodLabel">Calm</b></div>
     </div>
-    <div class="board"><small>score</small><strong id="score">0</strong></div>
-    <div class="plank nails" id="strikes" title="Strikes: three and you're done"><i class="nail"></i><i class="nail"></i><i class="nail"></i></div>
-    <div class="plank clock" id="clockBox"><svg viewBox="0 0 30 30" width="26" height="26" aria-hidden="true"><circle cx="8" cy="7" r="5" fill="#d9442e" stroke="#1b1210" stroke-width="2"/><circle cx="22" cy="7" r="5" fill="#d9442e" stroke="#1b1210" stroke-width="2"/><circle cx="15" cy="17" r="11" fill="#fbf4df" stroke="#1b1210" stroke-width="2.5"/><path d="M15 17V10M15 17l5 3" stroke="#1b1210" stroke-width="2" stroke-linecap="round"/></svg><span id="clock">0:00</span><span class="tier" id="tier" title="Stars if you finish now"></span></div>
+    <div class="plank clock" id="clockBox"><svg viewBox="0 0 30 30" width="26" height="26" aria-hidden="true"><circle cx="8" cy="7" r="5" fill="#d9442e" stroke="#1b1210" stroke-width="2"/><circle cx="22" cy="7" r="5" fill="#d9442e" stroke="#1b1210" stroke-width="2"/><circle cx="15" cy="17" r="11" fill="#fbf4df" stroke="#1b1210" stroke-width="2.5"/><path d="M15 17V10M15 17l5 3" stroke="#1b1210" stroke-width="2" stroke-linecap="round"/></svg><span id="clock">0:00</span><span class="tier" id="tier" title="Stars if you finish now"></span><span class="pts" title="Score"><b id="score">0</b> pts</span></div>
+    <div class="plank hearts" id="strikes" title="Chances left: he can catch you three times before the day is over" role="img" aria-label="3 chances left"><i class="heart"><svg viewBox="0 0 24 22"><path d="M12 20.5S3 15 3 8.6A4.6 4.6 0 0 1 12 6.4a4.6 4.6 0 0 1 9 2.2C21 15 12 20.5 12 20.5z"/></svg></i><i class="heart"><svg viewBox="0 0 24 22"><path d="M12 20.5S3 15 3 8.6A4.6 4.6 0 0 1 12 6.4a4.6 4.6 0 0 1 9 2.2C21 15 12 20.5 12 20.5z"/></svg></i><i class="heart"><svg viewBox="0 0 24 22"><path d="M12 20.5S3 15 3 8.6A4.6 4.6 0 0 1 12 6.4a4.6 4.6 0 0 1 9 2.2C21 15 12 20.5 12 20.5z"/></svg></i></div>
+    <div class="spacer app-spacer"></div>
     <button class="small-sign app-only" id="listBtn" type="button">List</button>
     <button class="small-sign app-only" id="mapBtn" type="button">House</button>
     <button class="small-sign gear" id="muteBtn" type="button" aria-label="Sound on. Tap to mute" aria-pressed="false" title="Mute"></button>
@@ -446,7 +453,7 @@ html.app .below .page.open .checklist{grid-template-columns:minmax(0,1fr)}
       <li>Click or tap to creep somewhere. Click objects to grab items, set traps or hide.</li>
       <li class="app-only">On a phone: drag to look around, pinch to zoom, and tap House to see the whole building. The camera follows you again when you move.</li>
       <li>He follows a routine. His thought bubble says where he's going next.</li>
-      <li>Same room and not hidden means you're caught. Three strikes and the day is over. The yard is always safe.</li>
+      <li>Same room and not hidden means you're caught. You have three hearts: each catch costs one, and losing all three ends the day. The yard is always safe.</li>
       <li>Climb the drainpipe from the yard to the kitchen window. He can only use the stairs.</li>
       <li>Glue holds him in place. Water soaks floors for 20 seconds. Electric traps are strong but noisy: if he's nearby he hears you and comes to look.</li>
       <li>Combos score double: electricity on a wet floor, or anything while something is glued to him.</li>
@@ -2384,7 +2391,7 @@ function pick(p) {
   for (const t of targets()) {
     const F = FY[t.f];
     if (p.y < F - 200 || p.y > F + 14) continue;
-    const dx = Math.abs(p.x - t.x) - (t.kind === 'item' ? 6 : 0);
+    const dx = Math.abs(p.x - t.x) - (t.kind === 'item' ? 12 : 0);   // items are small: give them a bigger target
     if (dx < tol && dx < bd) { bd = dx; best = t; }
   }
   return best;
@@ -2855,9 +2862,16 @@ function drawMarkers(c) {
       famIcon(c, pr.fam, x, y, 1.1 * k);
       if (pr.fam === 'elec' && Math.floor(perf * 6) % 3 === 0) { c.strokeStyle = '#bfe8ff'; c.lineWidth = 2; line(c, x - 10, y + 10, x - 4, y + 4); line(c, x + 9, y + 11, x + 4, y + 5); }
     } else {
-      c.globalAlpha = .7 + .2 * Math.sin(perf * 3);
-      circle(c, x, y, 10); fs(c, 'rgba(251,244,223,.85)', INK, 2);
-      famIcon(c, pr.fam, x, y, .55);
+      // a disc in the prank family's colour that pulses when you can do it now; grey and still when you're missing the item.
+      // It keeps a readable size on screen when the camera is zoomed out to the whole house.
+      const ready = !pr.need || G.inv.includes(pr.need), z = Math.max(1, .75 / cam.z), r = 11 * z;
+      const k = ready ? 1 + Math.sin(perf * 4 + x) * .1 : 1;
+      if (ready) { c.globalAlpha = .35 + .25 * Math.sin(perf * 4 + x); circle(c, x, y, r * 1.6 * k); c.fillStyle = FAM[pr.fam].col; c.fill(); c.globalAlpha = 1; }
+      else c.globalAlpha = .55;
+      circle(c, x, y, r * k); fs(c, ready ? FAM[pr.fam].col : '#8a8078', INK, 2.5 * z);
+      circle(c, x, y, r * .68 * k); fs(c, '#fbf4df', null);
+      if (ready) famIcon(c, pr.fam, x, y, .6 * z * k);
+      else { c.fillStyle = '#6b5a52'; c.font = `${Math.round(13 * z)}px "Bangers", Impact, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('?', x, y + 1); }
       c.globalAlpha = 1;
     }
   }
@@ -2945,8 +2959,9 @@ function render() {
     }
   }
   for (const it of G.items) if (!it.taken) {
-    const y = FY[it.f] - it.h - 14 + Math.sin(perf * 3 + it.x) * 2;
-    drawItem(ctx, it.id, it.x, y, 1.15);
+    const z = Math.max(1, .8 / cam.z), y = FY[it.f] - it.h - 14 * z + Math.sin(perf * 3 + it.x) * 2;
+    ctx.globalAlpha = .3 + .2 * Math.sin(perf * 4 + it.x); circle(ctx, it.x, y, 17 * z); ctx.fillStyle = '#fff7c2'; ctx.fill(); ctx.globalAlpha = 1;   // a glow so pick-ups stand out
+    drawItem(ctx, it.id, it.x, y, 1.15 * z);
     ctx.globalAlpha = .5 + .5 * Math.sin(perf * 5 + it.x); star(ctx, it.x + 14, y - 15, 4.5, '#fff7e6'); ctx.globalAlpha = 1;
   }
   drawMarkers(ctx);
@@ -3204,14 +3219,19 @@ function updateHud(force) {
     $('tier').innerHTML = [0, 1, 2].map(i => `<span class="${i < tier ? '' : 'off'}">★</span>`).join('');
   }
   if (force || hudCache.score !== G.score) { $('score').textContent = G.score; hudCache.score = G.score; }
-  if (force || hudCache.strikes !== G.strikes) { [...$('strikes').children].forEach((s, i) => s.classList.toggle('used', i < G.strikes)); hudCache.strikes = G.strikes; }
+  if (force || hudCache.strikes !== G.strikes) {
+    [...$('strikes').children].forEach((s, i) => s.classList.toggle('used', i >= 3 - G.strikes));   // hearts empty from the right
+    $('strikes').setAttribute('aria-label', `${3 - G.strikes} chance${3 - G.strikes === 1 ? '' : 's'} left`); hudCache.strikes = G.strikes;
+  }
   const B = G.br, shake = B.anger === 3 ? Math.sin(perf * 40) * 4 : 0;
   $('needle').setAttribute('transform', `rotate(${-80 + B.anger * 53 + Math.min(1, B.angerT / 25) * -8 * (B.anger > 0) + shake} 50 52)`);
   if (force || hudCache.mood !== B.anger) { $('moodLabel').textContent = MOODS[B.anger]; hudCache.mood = B.anger; }
 }
 function renderTray(fresh) {
+  // on a phone the pockets show only what you carry (and hide when empty); tap one to see its name
   const tray = $('tray'); tray.innerHTML = '';
-  for (let i = 0; i < 6; i++) {
+  tray.parentElement.classList.toggle('empty', !G.inv.length);
+  for (let i = 0; i < (appMode ? G.inv.length : Math.max(6, G.inv.length)); i++) {
     const s = document.createElement('div'); s.className = 'slot';
     const id = G.inv[i];
     if (id) {
@@ -3219,6 +3239,7 @@ function renderTray(fresh) {
       drawItem(c.getContext('2d'), id, 48, 50, 2.6);
       const n = document.createElement('span'); n.textContent = ITEMS[id];
       s.append(c, n); s.title = ITEMS[id];
+      s.addEventListener('click', () => toast(ITEMS[id]));
       if (id === fresh && i === G.inv.length - 1) s.classList.add('new');
     }
     tray.appendChild(s);
