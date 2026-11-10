@@ -323,6 +323,7 @@ html.app .below .page.open .checklist{grid-template-columns:minmax(0,1fr)}
     <div class="plank clock" id="clockBox"><svg viewBox="0 0 30 30" width="26" height="26" aria-hidden="true"><circle cx="8" cy="7" r="5" fill="#d9442e" stroke="#1b1210" stroke-width="2"/><circle cx="22" cy="7" r="5" fill="#d9442e" stroke="#1b1210" stroke-width="2"/><circle cx="15" cy="17" r="11" fill="#fbf4df" stroke="#1b1210" stroke-width="2.5"/><path d="M15 17V10M15 17l5 3" stroke="#1b1210" stroke-width="2" stroke-linecap="round"/></svg><span id="clock">0:00</span><span class="tier" id="tier" title="Stars if you finish now"></span></div>
     <button class="small-sign app-only" id="listBtn" type="button">List</button>
     <button class="small-sign app-only" id="mapBtn" type="button">House</button>
+    <button class="small-sign gear" id="muteBtn" type="button" aria-label="Sound on. Tap to mute" aria-pressed="false" title="Mute"></button>
     <button class="small-sign gear" id="gearBtn" type="button" aria-label="Pause and settings" title="Pause and settings (P)">
       <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="#fff7e6" stroke="#1b1210" stroke-width="1.5" stroke-linejoin="round" d="M10.3 2h3.4l.5 2.6c.7.2 1.3.45 1.9.8l2.2-1.5 2.4 2.4-1.5 2.2c.35.6.6 1.2.8 1.9l2.6.5v3.4l-2.6.5c-.2.7-.45 1.3-.8 1.9l1.5 2.2-2.4 2.4-2.2-1.5c-.6.35-1.2.6-1.9.8l-.5 2.6h-3.4l-.5-2.6c-.7-.2-1.3-.45-1.9-.8l-2.2 1.5-2.4-2.4 1.5-2.2c-.35-.6-.6-1.2-.8-1.9L2 13.7v-3.4l2.6-.5c.2-.7.45-1.3.8-1.9L3.9 5.7l2.4-2.4 2.2 1.5c.6-.35 1.2-.6 1.9-.8z"/><circle cx="12" cy="12" r="3.2" fill="#74492b" stroke="#1b1210" stroke-width="1.5"/></svg>
     </button>
@@ -928,10 +929,10 @@ function audio() {
       musicBus = AC.createGain(); musicBus.gain.value = musicOn ? .5 : 0; musicBus.connect(master);
     } catch (e) { AC = null; }
   }
-  if (AC && AC.state === 'suspended') AC.resume();
+  if (AC && AC.state === 'suspended' && soundAllowed()) AC.resume();
   // iPhones silence web audio when the ringer switch is off, unless a media track is playing:
   // a looping silent clip, started from a tap, keeps the game audible like a video would be.
-  if (!iosUnlock) {
+  if (!iosUnlock && soundAllowed()) {
     try {
       iosUnlock = new Audio(silentWav());
       iosUnlock.loop = true; iosUnlock.volume = 0;
@@ -948,12 +949,26 @@ function silentWav() {   // 0.1 s of 8-bit mono silence as a data URI
   let bin = ''; for (const x of b) bin += String.fromCharCode(x);
   return 'data:audio/wav;base64,' + btoa(bin);
 }
+// Sound plays only while unmuted and while the game is on screen. Otherwise the whole audio engine and the silent
+// iPhone track are paused, so nothing keeps running (or shows as "playing" on the phone) in the background.
+const soundAllowed = () => !muted && !document.hidden;
+function applySound() {
+  const on = soundAllowed();
+  if (master) { master.gain.cancelScheduledValues(AC.currentTime); master.gain.value = on ? 1 : 0; }
+  if (AC) { if (on && AC.state === 'suspended') AC.resume(); else if (!on && AC.state === 'running') AC.suspend(); }
+  if (iosUnlock) { if (on) { const p = iosUnlock.play(); if (p && p.catch) p.catch(() => {}); } else iosUnlock.pause(); }
+  if (!on) setMusic(false);
+}
+const SPEAKER_ON = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3z" fill="#fff7e6" stroke="#1b1210" stroke-width="1.6" stroke-linejoin="round"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="#fff7e6" stroke-width="2" stroke-linecap="round"/></svg>';
+const SPEAKER_OFF = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3z" fill="#fff7e6" stroke="#1b1210" stroke-width="1.6" stroke-linejoin="round"/><path d="M16 9l6 6M22 9l-6 6" stroke="#ffb0a2" stroke-width="2.4" stroke-linecap="round"/></svg>';
 function setMuted(m) {
   muted = m;
   try { localStorage.setItem('dd-muted', m ? '1' : '0'); } catch (e) {}
-  if (master) master.gain.setTargetAtTime(m ? 0 : 1, AC.currentTime, .02);
+  applySound();
   const b = document.getElementById('pmSound');
   if (b) { b.textContent = m ? 'Sound: off' : 'Sound: on'; b.setAttribute('aria-pressed', !m); }
+  const s = document.getElementById('muteBtn');
+  if (s) { s.innerHTML = m ? SPEAKER_OFF : SPEAKER_ON; s.setAttribute('aria-pressed', m); s.setAttribute('aria-label', m ? 'Sound off. Tap to turn it on' : 'Sound on. Tap to mute'); s.title = m ? 'Sound off' : 'Mute'; }
 }
 function note(f, t, d, type, v, bus, f2) {
   const a = AC, o = a.createOscillator(), g = a.createGain();
@@ -3186,6 +3201,7 @@ function togglePause() { if (mode !== 'play') return; if (paused) resume(); else
 $('gearBtn').addEventListener('click', () => { audio(); if (mode === 'play' && !(paused && !$('pauseMenu').hidden)) { $('listPage').classList.remove('open'); setPaused(true, true); } });
 $('pmResume').addEventListener('click', resume);
 $('pmSound').addEventListener('click', () => { audio(); setMuted(!muted); });
+$('muteBtn').addEventListener('click', () => { const m = !muted; setMuted(m); if (!m) audio(); });
 $('pmMusic').addEventListener('click', toggleMusic);
 $('pmRestart').addEventListener('click', () => { const i = G.li; $('pauseMenu').hidden = true; newGame(i); play(); });
 $('pmMenu').addEventListener('click', () => { toggleList(false); openMenu(); });
@@ -3248,7 +3264,8 @@ window.addEventListener('keydown', e => {
   if (e.key === 'Escape' && mode === 'play') togglePause();
   if ((e.key === 'f' || e.key === 'F') && !e.repeat) setFast(true);
 });
-document.addEventListener('visibilitychange', () => { if (document.hidden && mode === 'play' && !paused) setPaused(true, true); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && mode === 'play' && !paused) setPaused(true, true); applySound(); });
+window.addEventListener('pagehide', applySound);
 
 /* ---------- loop ---------- */
 // Full screen on every device; touch devices also try real full screen + landscape lock.
@@ -3292,7 +3309,7 @@ function loop(now) {
   if (touchHoverUntil && perf > touchHoverUntil) { hover = null; touchHoverUntil = 0; }
   updateCamera(dt);
   if (!paused) updateWeather(dt);
-  setMusic(musicOn && mode === 'play' && !paused && !document.hidden);
+  setMusic(musicOn && mode === 'play' && !paused && soundAllowed());
   render();
   requestAnimationFrame(loop);
 }
