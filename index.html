@@ -290,6 +290,16 @@ html.app .slot span{display:none}
 html.app .below .page{display:none}
 html.app .below .page.open{display:block;position:fixed;z-index:9;pointer-events:auto;top:max(8px,env(safe-area-inset-top,0px));bottom:max(8px,env(safe-area-inset-bottom,0px));right:max(8px,env(safe-area-inset-right,0px));width:min(360px,calc(100vw - 32px));overflow:auto;transform:none;padding-top:14px}
 html.app .below .page.open .checklist{grid-template-columns:minmax(0,1fr)}
+/* touch screens held upright: a full-screen note covers everything until the phone is turned sideways */
+.turn{display:none}
+@media (orientation:portrait){
+  html.touch .turn{display:flex;position:fixed;inset:0;z-index:1000;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;background:radial-gradient(ellipse at 50% 40%,#3b2a44,#140c18 75%);color:#fff7e6}
+  html.touch .turn b{font-family:var(--shout);font-weight:400;font-size:34px;letter-spacing:1px;color:#f5c400;-webkit-text-stroke:1.5px var(--ink);paint-order:stroke fill;text-shadow:3px 3px 0 var(--ink)}
+  html.touch .turn span{font-family:var(--sign);font-size:17px;max-width:300px;opacity:.85}
+  html.touch .turn-phone{transform-origin:32px 30px;animation:turnit 2.4s ease-in-out infinite}
+}
+@keyframes turnit{0%,25%{transform:rotate(0)}55%,85%{transform:rotate(-90deg)}100%{transform:rotate(0)}}
+@media (prefers-reduced-motion:reduce){.turn-phone{animation:none!important}}
 .rotate{position:absolute;z-index:6;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-1deg);background:var(--paper);color:var(--ink);border:3px solid var(--ink);box-shadow:4px 4px 0 var(--ink);padding:14px 18px;text-align:center;font-size:18px;width:min(300px,80vw);display:flex;flex-direction:column;gap:10px;align-items:center}
 .rotate svg{display:block}
 @media (max-height:520px){
@@ -320,6 +330,11 @@ html.app .below .page.open .checklist{grid-template-columns:minmax(0,1fr)}
 }
 </style>
 
+<div class="turn" id="turnPhone" role="alert">
+  <svg viewBox="0 0 64 64" width="96" height="96" aria-hidden="true"><g class="turn-phone"><rect x="20" y="8" width="24" height="44" rx="5" fill="#fbf4df" stroke="#1b1210" stroke-width="3.5"/><rect x="25" y="14" width="14" height="30" rx="2" fill="#74492b"/><circle cx="32" cy="48" r="2" fill="#1b1210"/></g><path d="M10 40a24 24 0 0 1 6-26" fill="none" stroke="#f5c400" stroke-width="4" stroke-linecap="round"/><path d="M8 18l8-5 3 9" fill="none" stroke="#f5c400" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <b>Turn your phone sideways</b>
+  <span>Dirty Deeds plays in landscape. If it stays like this, turn off your phone's rotation lock.</span>
+</div>
 <div class="wrap">
   <header class="hud">
     <div class="logo">Dirty Deeds</div>
@@ -3320,8 +3335,8 @@ function play() {
   cam.mode = appMode ? 'follow' : 'fit'; cam.manual = false; cam.tz = appMode ? followZoom() : zoomBounds()[0];
   if (G) { cam.x = G.player.x; cam.y = G.player.y - 70; }
   $('mapBtn').textContent = 'House';
-  $('rotate').hidden = !(appMode && VH > VW && !rotateDismissed);
-  if ($('rotate').hidden === false) paused = true;
+  $('rotate').hidden = true;
+  checkTurn();
   if (isTouch) goFullscreen();
 }
 function goFullscreen() {
@@ -3499,6 +3514,15 @@ function detectApp() {
   appMode = true;
   isTouch = matchMedia('(pointer: coarse)').matches;
   document.documentElement.classList.add('app');
+  document.documentElement.classList.toggle('touch', isTouch);
+}
+// Phones and tablets play in landscape only. Held upright, the turn-your-phone note covers the screen and the day
+// pauses; turning sideways carries on where you were.
+let turnPaused = false;
+function checkTurn() {
+  const upright = isTouch && innerHeight > innerWidth;
+  if (upright && mode === 'play' && !paused) { setPaused(true); turnPaused = true; }
+  else if (!upright && turnPaused) { turnPaused = false; if (mode === 'play' && $('pauseMenu').hidden && !$('listPage').classList.contains('open')) setPaused(false); }
 }
 function setupCanvas() {
   detectApp();
@@ -3511,7 +3535,7 @@ function setupCanvas() {
   if (Math.abs(s - BG_S) > .2 || !bg.width) { BG_S = s; buildBg(); }
   if (OUT_S !== Math.min(1.5, DPR)) buildOuter();
   if (mode === 'play' && cam.mode === 'follow' && !cam.manual) cam.tz = followZoom();
-  if (mode === 'play' && !$('rotate').hidden && VW >= VH) { $('rotate').hidden = true; setPaused(false); }
+  checkTurn();
 }
 (function lockViewport() {
   const want = 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover';
