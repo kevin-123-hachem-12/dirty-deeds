@@ -1150,6 +1150,12 @@ function setMusic(want) {
 
 /* ---------- item icons ---------- */
 function drawItem(c, id, x, y, s = 1) {
+  const art = ART['item-' + id];
+  if (art) {   // its painting, once it has arrived: about 32 units across, centred where the drawn icon would be
+    const w = art.x1 - art.x0, h = art.y1 - art.y0, k = 32 * s / Math.max(w, h);
+    c.drawImage(art.img, art.x0, art.y0, w, h, x - w * k / 2, y - h * k / 2, w * k, h * k);
+    return;
+  }
   c.save(); c.translate(x, y); c.scale(s, s);
   const k = 2;
   switch (id) {
@@ -1981,6 +1987,7 @@ const mapKey = () => Object.keys(MAPS).find(k => MAPS[k] === MAP);
 function artRank(name) {
   if (prog.outfit && name.startsWith(`outfit-${prog.outfit}-`)) return 0;
   const here = mapKey(), set = ART_SETS[here] || [];
+  if (name.startsWith('item-')) return 1;
   if (/^(prankster|neighbour)-(idle|creep|work|climb|cheer|caught|walk|reading|glue|wet|shock|rage|catch|slip|flat|sniff|shriek|chilli|swat|ears|soaked)/.test(name) || /^dog-/.test(name) || /^(room-hall|staircase|landing-railing|front-door|yard|house-shell)$/.test(name)) return 0;
   if (set.includes(name) || (ART_EXTRA[here] || []).includes(name) || set.includes(name.replace(/-pranked$/, ''))) return 1;
   return 2;
@@ -2015,6 +2022,7 @@ setInterval(() => {
   if (mode === 'menu') drawMenuArt();
   if (bg.width) buildBg();
   if (OUT_S) buildOuter();
+  if (G && mode === 'play') renderTray();   // painted item icons as they arrive
 }, 250);
 async function loadArt() {
   let names = null;
@@ -2150,7 +2158,7 @@ function drawSprite(c, sp, x, y, dir, squash, extra) {
   return (a.y1 - a.y0) * s;   // drawn height, for anything placed above the head
 }
 // Where the top of the head is in a pose's picture: the first row from the top where one solid run of pixels is at least
-// a sixth of the figure's width (a raised fist is narrower), and how wide the head is a little below that. Worked out once per picture.
+// an eighth of the figure's height (a raised fist is narrower), and how wide the head is a little below that. Worked out once per picture.
 function headAnchor(a) {
   if (a.head !== undefined) return a.head;
   a.head = null;
@@ -2159,7 +2167,7 @@ function headAnchor(a) {
   const runAt = y => { let run = 0, best = 0, bs = 0, st = 0; for (let x = 0; x < w; x++) { if (d[(y * w + x) * 4 + 3] > 128) { if (!run) st = x; if (++run > best) { best = run; bs = st; } } else run = 0; } return [best, bs]; };
   for (let y = 0; y < hh; y++) {
     const [best, bs] = runAt(y);
-    if (best >= w * .16) { const [bw, bstart] = runAt(Math.min(hh - 1, y + Math.round((a.y1 - a.y0) * .05))); a.head = { x: a.x0 + bstart + bw / 2, y: a.y0 + y, w: Math.max(best, bw) }; break; }
+    if (best >= (a.y1 - a.y0) * .12) { const [bw, bstart] = runAt(Math.min(hh - 1, y + Math.round((a.y1 - a.y0) * .05))); a.head = { x: a.x0 + bstart + bw / 2, y: a.y0 + y, w: Math.max(best, bw) }; break; }
   }
   return a.head;
 }
@@ -2181,11 +2189,19 @@ function openHat(h) {
   }
   h.img.getContext('2d').putImageData(im, h.x0, top);
 }
+// How each hat sits: how far down over the hair it comes (in head widths), how wide it is, and whether its painting
+// faces left and needs mirroring (the cap's brim goes at the front).
+const HAT_FIT = { 'hat-beanie': [.62, 1.2, 0], 'hat-cap': [.42, 1.2, 1], 'hat-bandana': [.66, 1.18, 0], 'hat-gnome': [.5, 1.12, 0], 'hat-crown': [.4, .95, 0] };
 function drawHat(c, a) {
-  const hat = prog.hat && ART[prog.hat], hd = hat && headAnchor(a); if (!hd) return;
+  const hat = prog.hat && ART[prog.hat]; let hd = hat && headAnchor(a); if (!hd) return;
   openHat(hat);
-  const hw = hd.w * 1.3, s = hw / (hat.x1 - hat.x0), hh = (hat.y1 - hat.y0) * s;
-  c.drawImage(hat.img, hat.x0, hat.y0, hat.x1 - hat.x0, hat.y1 - hat.y0, hd.x - hw / 2, hd.y - hh + hd.w * .42, hw, hh);
+  // the caught pose's hair sticks up and back, so its head sits a little lower and further forward than the outline says
+  if (a === ART['prankster-caught'] || (prog.outfit && a === ART[`outfit-${prog.outfit}-caught`])) hd = { ...hd, x: hd.x + hd.w * .12, y: hd.y + hd.w * .2 };
+  const [dep, wid, flip] = HAT_FIT[prog.hat] || [.55, 1.15, 0];
+  const hw = hd.w * wid, s = hw / (hat.x1 - hat.x0), hh = (hat.y1 - hat.y0) * s;
+  c.save(); c.translate(hd.x, hd.y - hh + hd.w * dep); if (flip) c.scale(-1, 1);
+  c.drawImage(hat.img, hat.x0, hat.y0, hat.x1 - hat.x0, hat.y1 - hat.y0, -hw / 2, 0, hw, hh);
+  c.restore();
 }
 function drawPranksterArt(c, P) {
   const moving = P.path.length > 0 && !P.caught, climbing = floorOf(P.y) === -1 && P.x < 300;
@@ -3079,14 +3095,14 @@ function drawEdgeMarker() {
   // when he's off screen, his painted face on the edge points to him; it turns red when he's heading your way
   const B = G.br, bx = (B.x - cam.x) * cam.z + VW / 2, by = (B.y - 50 - cam.y) * cam.z + VH / 2;
   if (bx > 0 && bx < VW && by > 0 && by < VH) return;
-  const top = appMode ? 70 : 28, ex = clamp(bx, 30, VW - 30), ey = clamp(by, top, VH - 30 - PAD_BOT()), a = Math.atan2(by - ey, bx - ex);
+  const top = appMode ? 78 : 36, ex = clamp(bx, 46, VW - 46), ey = clamp(by, top, VH - 46 - PAD_BOT()), a = Math.atan2(by - ey, bx - ex);   // far enough in that the arrow stays on screen
   const face = ART['neighbour-face-' + (B.anger >= 2 ? 'rage' : 'shock')], hot = G.danger > .4, k = hot ? 1 + Math.sin(perf * 10) * .08 : 1;
   ctx.save(); ctx.translate(ex, ey); ctx.scale(k, k);
   ctx.save(); ctx.rotate(a); poly(ctx, [[19, -8], [32, 0], [19, 8]]); fs(ctx, '#d9442e', INK, 2.5); ctx.restore();
   if (face) {
     circle(ctx, 0, 0, 20); fs(ctx, hot ? '#d9442e' : '#fbf4df', INK, 3);
     ctx.save(); circle(ctx, 0, 0, 16.5); ctx.clip();
-    const s = 46 / (face.y1 - face.y0), cx = (face.x0 + face.x1) / 2, cy = face.y0 + (face.y1 - face.y0) * .45;
+    const s = 50 / (face.y1 - face.y0), cx = face.x0 + (face.x1 - face.x0) * .56, cy = face.y0 + (face.y1 - face.y0) * .44;   // the head, not the shoulders
     ctx.drawImage(face.img, -cx * s, -cy * s, face.img.width * s, face.img.height * s);
     ctx.restore(); ctx.restore(); return;
   }
