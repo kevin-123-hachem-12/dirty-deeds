@@ -215,7 +215,7 @@ button.snap{cursor:pointer;font:inherit}
 .rw-card.locked{opacity:.72}.rw-card.locked canvas{filter:grayscale(1) brightness(.6)}
 button.rw-card{cursor:pointer}
 li.bonus .t::before{content:"Bonus · ";color:#7a3fa0}
-.fam.gag{background:#b46bd6}
+.fam.gag{background:#b46bd6}.fam.animal{background:#9c6b3c}.fam.food{background:#d6336c}.fam.noise{background:#2fb5a3}
 .gear{display:grid;place-items:center;padding:4px 7px!important}
 .gear svg{display:block}
 .card.pausecard{max-width:420px;gap:10px}
@@ -440,6 +440,8 @@ html.app .below .page.open .checklist{grid-template-columns:minmax(0,1fr)}
       <li>Combos score double: electricity on a wet floor, or anything while something is glued to him.</li>
       <li>Every prank raises his temper. At Furious he walks faster and checks hiding spots.</li>
       <li>Do every deed to finish the day. Finish with 30 seconds or more on the clock for 3 stars, before it hits zero for 2, or in overtime for 1.</li>
+      <li>New pranks: animals send him running out of the room, food sends him hunting for water, and noise pranks go off a few seconds after you set them and lure him over.</li>
+      <li>He gets smarter: he checks spots where he was pranked, notices missing things, searches the hiding spot he last found you in, and on harder days sets traps. Tap a trap to disarm it.</li>
       <li>Every prank snaps a photo for your Photo Album. Stars unlock Rewards: gadgets that add a bonus prank to every day, and hats for the Prankster.</li>
       <li>Waiting for him? Press and hold the fast-forward button in the corner (or hold F) to run time three times as fast. The gear button pauses the day, with sound, music, restart and the main menu inside. P also pauses.</li>
     </ul>
@@ -575,11 +577,14 @@ const BEACH_HIDES = {
   ...HALL_HIDES,
 };
 let SPOTS = HOUSE_SPOTS, HIDES = HOUSE_HIDES;
-const FAM = { glue: { name: 'Glue', col: '#e07b39' }, water: { name: 'Water', col: '#3b8fd9' }, elec: { name: 'Electric', col: '#f5c400' }, gag: { name: 'Gag', col: '#b46bd6' } };
+const FAM = { glue: { name: 'Glue', col: '#e07b39' }, water: { name: 'Water', col: '#3b8fd9' }, elec: { name: 'Electric', col: '#f5c400' }, gag: { name: 'Gag', col: '#b46bd6' },
+  animal: { name: 'Animal', col: '#9c6b3c' }, food: { name: 'Food', col: '#d6336c' }, noise: { name: 'Noise', col: '#2fb5a3' } };
 const ITEMS = {
   superglue: 'Super glue', gum: 'Chewing gum', gluegun: 'Glue gun', tape: 'Double-sided tape',
   salt: 'Salt', wrench: 'Wrench', soap: 'Washing-up liquid', bucket: 'Bucket of water', pondwater: 'Jar of pond water',
   paperclip: 'Paperclip', fork: 'Fork', pliers: 'Pliers', cable: 'Extension lead', screwdriver: 'Screwdriver',
+  mouse: 'Mouse in a box', beejar: 'Jar of bees', crab: 'Crab in a bucket', chips: 'Bag of chips', chilli: 'Extra-hot chilli', prunes: 'Prune juice',
+  alarmclock: 'Alarm clock', airhorn: 'Air horn',
 };
 const PRANKS = {
   remoteGlue:  { spot: 'remote',  fam: 'glue',  need: 'superglue',   name: 'Glue the remote to the table', pts: 110, say: 'Let GO of me!',          fx: 'YANK!',      prop: 'remote' },
@@ -619,9 +624,26 @@ const PRANKS = {
   fanWires:    { spot: 'fan',        fam: 'elec',  need: 'pliers',      name: 'Rewire the ceiling fan',        pts: 150, say: 'My HAIR! My HAIR!',      fx: 'WHOOSH!',   dark: 'lounge' },
   bathSoap:    { spot: 'bathfloor',  fam: 'water', need: 'soap',        name: 'Soap on the bathroom tiles',    pts: 150, say: 'WHOOAA... SPLAT!',       fx: 'SKIDDD!',   wet: 'bathroom' },
   scopeTape:   { spot: 'telescope',  fam: 'glue',  need: 'tape',        name: 'Tape on the telescope eyepiece', pts: 110, say: 'Who turned the SEA off?!', fx: 'BONK!',   prop: 'handle' },
+  // Season 2. Animals send him running out of the room (flee = what he shouts); food sends him looking for water;
+  // noise goes off a few seconds after you set it and lures him over (timer = seconds, lure = his thought).
+  breadMouse:  { spot: 'toaster',    fam: 'animal', need: 'mouse',      name: 'A mouse in the bread bin',        pts: 120, say: 'EEEK! A MOUSE!',          fx: 'SQUEAK!',  flee: 'Get it OUT!' },
+  soupChilli:  { spot: 'stove',      fam: 'food',   need: 'chilli',     name: 'Extra-hot chilli in his eggs',    pts: 120, say: 'HOT! HOT! HOOOT!',        fx: 'FWOOSH!',  then: 'sink' },
+  sherryPrunes:{ spot: 'trolley',    fam: 'food',   need: 'prunes',     name: 'Prune juice in his sherry',       pts: 110, say: 'Ooh... my TUMMY...',      fx: 'GURGLE!',  flee: "Where's the LOO?!" },
+  fishAlarm:   { spot: 'fishtank',   fam: 'noise',  need: 'alarmclock', name: 'Alarm clock behind the fish tank', pts: 100, say: 'Who set THAT?!',         fx: 'BRRRING!', timer: 10, lure: "What's that ringing?!" },
+  doorHorn:    { spot: 'door',       fam: 'noise',  need: 'airhorn',    name: 'Air horn under the doormat',      pts: 120, say: 'AAARGH! My EARS!',        fx: 'HOOONK!',  timer: 12, lure: 'Is someone at the door?' },
+  trainBees:   { spot: 'trains',     fam: 'animal', need: 'beejar',     name: 'Bees in the railway tunnel',      pts: 130, say: 'BEES! BEES! BEEEES!',     fx: 'BZZZZZ!',  flee: 'Get AWAY from me!' },
+  benchMouse:  { spot: 'bench',      fam: 'animal', need: 'mouse',      name: 'A mouse in his toolbox',          pts: 110, say: 'Get OFF my spanners!',    fx: 'SQUEAK!',  flee: 'Vermin! VERMIN!' },
+  popChilli:   { spot: 'minifridge', fam: 'food',   need: 'chilli',     name: 'Chilli in his fizzy pop',         pts: 110, say: 'My TONGUE is on FIRE!',   fx: 'FWOOSH!' },
+  radioAlarm:  { spot: 'radio',      fam: 'noise',  need: 'alarmclock', name: 'Alarm clock in the radio cabinet', pts: 100, say: 'Not the RADIO too!',     fx: 'BRRRING!', timer: 10, lure: 'Is that my radio?!' },
+  dartsHorn:   { spot: 'darts',      fam: 'noise',  need: 'airhorn',    name: 'Air horn behind the dartboard',   pts: 110, say: 'I nearly SWALLOWED a dart!', fx: 'HOOONK!', timer: 12, lure: 'What the...?' },
+  showerGull:  { spot: 'shower',     fam: 'animal', need: 'chips',      name: 'Chips in the shower for the seagulls', pts: 130, say: 'GET OFF, you flying RAT!', fx: 'SQUAWK!', flee: 'Shoo! SHOO!' },
+  hammockCrab: { spot: 'hammock',    fam: 'animal', need: 'crab',       name: 'A crab in the hammock',           pts: 120, say: 'OW! MY TOES!',            fx: 'PINCH!',   flee: 'Where did it GO?!' },
+  smoothieChilli: { spot: 'blender', fam: 'food',   need: 'chilli',     name: 'Chilli in his smoothie',          pts: 120, say: 'WATER! WATERRR!',         fx: 'FWOOSH!',  then: 'shower' },
+  scopeHorn:   { spot: 'telescope',  fam: 'noise',  need: 'airhorn',    name: 'Foghorn by the telescope',        pts: 110, say: 'I thought it was a SHIP!', fx: 'BWAAAMP!', timer: 12, lure: 'A ship? Out there?' },
+  deckAlarm:   { spot: 'deckchair',  fam: 'noise',  need: 'alarmclock', name: 'Alarm clock under the deckchair', pts: 100, say: 'I was ASLEEP!',           fx: 'BRRRING!', timer: 10, lure: 'Who left an alarm on?' },
 };
-const SET_TIME = { glue: 1.5, water: 2, elec: 3, gag: 1.2 };
-const REACT_TIME = { glue: 3.2, water: 1.8, elec: 2.4, gag: 2.2 };
+const SET_TIME = { glue: 1.5, water: 2, elec: 3, gag: 1.2, animal: 1.8, food: 1.5, noise: 1.5 };
+const REACT_TIME = { glue: 3.2, water: 1.8, elec: 2.4, gag: 2.2, animal: 2.4, food: 2.6, noise: 1.8 };
 // Star rewards. Gadgets add one bonus prank to every day (extra points, never needed to finish), on a spot each location has.
 // Hats are worn by the Prankster once unlocked and picked on the Rewards board.
 const GADGETS = {
@@ -641,147 +663,155 @@ const HATS = [
 // Item positions: x, floor, h = height above the floor it rests at.
 const LEVELS = [
   {
-    name: 'Sticky Sunday', time: 200, shot: '#7f8f5e', theme: 'sunny',
-    text: 'He spends Sunday glued to the telly. Time to make that literal. Today is all glue.',
+    name: 'Sticky Sunday', time: 225, shot: '#7f8f5e', theme: 'sunny',
+    text: 'He spends Sunday glued to the telly. Time to make that literal. Mostly glue today, plus one furry surprise.',
     tip: 'Glue holds him in place for a few seconds after it gets him. Use that window to move.',
-    pranks: ['remoteGlue', 'sofaGum', 'chairGlue', 'cabinetTape'],
-    items: [{ id: 'superglue', x: 40, f: 0, h: 0 }, { id: 'gum', x: 150, f: 0, h: 52 }, { id: 'gluegun', x: 1062, f: 0, h: 0 }, { id: 'tape', x: 1120, f: 1, h: 0 }],
-    routine: [['sofa', 9], ['remote', 3], ['tv', 8], ['table', 9], ['cabinet', 4], ['kettle', 6], ['sink', 5]],
+    pranks: ['remoteGlue', 'sofaGum', 'chairGlue', 'cabinetTape', 'breadMouse'],
+    items: [{ id: 'superglue', x: 40, f: 0, h: 0 }, { id: 'gum', x: 150, f: 0, h: 52 }, { id: 'gluegun', x: 1062, f: 0, h: 0 }, { id: 'tape', x: 1120, f: 1, h: 0 }, { id: 'mouse', x: 100, f: 0, h: 0 }],
+    routine: [['sofa', 9], ['remote', 3], ['tv', 8], ['table', 9], ['cabinet', 4], ['kettle', 6], ['sink', 5], ['toaster', 5]],
   },
   {
-    name: 'Wash Day', time: 220, shot: '#5f86a6', theme: 'rain',
-    text: "It's pouring, it's laundry day, and everything in this house is about to get wet. Today is all water.",
+    name: 'Wash Day', time: 245, shot: '#5f86a6', theme: 'rain',
+    text: "It's pouring, it's laundry day, and everything in this house is about to get wet. Mostly water today, and something for his tummy.",
     tip: 'Salty tea sends him to the tap. Loosen it first. Wet floors stay wet for 20 seconds.',
-    pranks: ['kettleSalt', 'sinkTap', 'tilesSoap', 'binWater', 'whisky'],
-    items: [{ id: 'wrench', x: 30, f: 0, h: 0 }, { id: 'pondwater', x: 80, f: 0, h: 0 }, { id: 'bucket', x: 132, f: 0, h: 0 }, { id: 'soap', x: 258, f: 1, h: 0 }, { id: 'salt', x: 668, f: 1, h: 122 }],
-    routine: [['kettle', 6], ['table', 8], ['bin', 4], ['drinks', 7], ['sofa', 10], ['fridge', 5], ['tv', 7]],
+    pranks: ['kettleSalt', 'sinkTap', 'tilesSoap', 'binWater', 'whisky', 'sherryPrunes'],
+    items: [{ id: 'wrench', x: 30, f: 0, h: 0 }, { id: 'pondwater', x: 80, f: 0, h: 0 }, { id: 'bucket', x: 132, f: 0, h: 0 }, { id: 'soap', x: 258, f: 1, h: 0 }, { id: 'salt', x: 668, f: 1, h: 122 }, { id: 'prunes', x: 1062, f: 0, h: 0 }],
+    routine: [['kettle', 6], ['table', 8], ['bin', 4], ['drinks', 7], ['sofa', 10], ['fridge', 5], ['tv', 7], ['trolley', 5]],
   },
   {
-    name: 'Power Cut', time: 240, shot: '#3a3d5a', theme: 'storm',
+    name: 'Power Cut', time: 265, shot: '#3a3d5a', theme: 'storm',
     text: "A thunderstorm, and his wiring is older than he is. Electric pranks hit hardest, but they take 3 seconds and make noise.",
     tip: "If he's on the same floor, he hears you and comes to look. Wire things up while he's on the other floor.",
-    pranks: ['fridgeWire', 'stoveDial', 'toasterFork', 'tvWires', 'switchBell'],
-    items: [{ id: 'screwdriver', x: 40, f: 0, h: 0 }, { id: 'cable', x: 440, f: 0, h: 0 }, { id: 'pliers', x: 1062, f: 0, h: 0 }, { id: 'fork', x: 790, f: 1, h: 72 }, { id: 'paperclip', x: 952, f: 1, h: 92 }],
+    pranks: ['fridgeWire', 'stoveDial', 'toasterFork', 'tvWires', 'switchBell', 'fishAlarm'],
+    items: [{ id: 'screwdriver', x: 40, f: 0, h: 0 }, { id: 'cable', x: 440, f: 0, h: 0 }, { id: 'pliers', x: 1062, f: 0, h: 0 }, { id: 'fork', x: 790, f: 1, h: 72 }, { id: 'paperclip', x: 952, f: 1, h: 92 }, { id: 'alarmclock', x: 1120, f: 1, h: 0 }],
     routine: [['switch', 3], ['tv', 7], ['sofa', 9], ['fridge', 5], ['stove', 7], ['toaster', 5], ['table', 8]],
   },
   {
-    name: 'Combo Breaker', time: 240, speed: 1.05, shot: '#c0602e', theme: 'autumn',
+    name: 'Combo Breaker', time: 265, speed: 1.05, shot: '#c0602e', theme: 'autumn',
     text: 'Autumn, and he has raked his leaves into your garden. Two pranks at once hit twice as hard. Mix glue, water and electricity.',
     tip: 'Electricity on a wet floor is a combo. So is any prank while something is glued to him. Combos score double.',
-    pranks: ['kettleSalt', 'sinkTap', 'fridgeWire', 'remoteGlue', 'tvWires', 'tilesSoap'],
-    items: [{ id: 'wrench', x: 30, f: 0, h: 0 }, { id: 'screwdriver', x: 80, f: 0, h: 0 }, { id: 'superglue', x: 132, f: 0, h: 0 }, { id: 'pliers', x: 1062, f: 0, h: 0 }, { id: 'soap', x: 258, f: 1, h: 0 }, { id: 'salt', x: 668, f: 1, h: 122 }],
-    routine: [['kettle', 6], ['fridge', 5], ['table', 8], ['remote', 3], ['tv', 8], ['sofa', 9], ['sink', 5]],
+    pranks: ['kettleSalt', 'sinkTap', 'fridgeWire', 'remoteGlue', 'tvWires', 'tilesSoap', 'soupChilli'],
+    items: [{ id: 'wrench', x: 30, f: 0, h: 0 }, { id: 'screwdriver', x: 80, f: 0, h: 0 }, { id: 'superglue', x: 132, f: 0, h: 0 }, { id: 'pliers', x: 1062, f: 0, h: 0 }, { id: 'soap', x: 258, f: 1, h: 0 }, { id: 'salt', x: 668, f: 1, h: 122 }, { id: 'chilli', x: 1120, f: 1, h: 0 }],
+    routine: [['kettle', 6], ['fridge', 5], ['table', 8], ['remote', 3], ['tv', 8], ['sofa', 9], ['sink', 5], ['stove', 6]],
   },
   {
-    name: 'Birthday Bash', time: 270, speed: 1.1, shot: '#e07bb0', theme: 'party',
+    name: 'Birthday Bash', time: 295, speed: 1.1, shot: '#e07bb0', theme: 'party',
     text: "It's his birthday and he planned a perfect day. He's rushing, so he walks faster.",
     tip: 'The doorbell trick pulls him to the front door for a few seconds. Good for getting upstairs unseen.',
-    pranks: ['chairGlue', 'cabinetTape', 'binWater', 'whisky', 'toasterFork', 'stoveDial', 'switchBell', 'sofaGum'],
-    items: [{ id: 'gum', x: 30, f: 0, h: 0 }, { id: 'pondwater', x: 80, f: 0, h: 0 }, { id: 'bucket', x: 132, f: 0, h: 0 }, { id: 'cable', x: 440, f: 0, h: 0 }, { id: 'gluegun', x: 1062, f: 0, h: 0 }, { id: 'tape', x: 1120, f: 1, h: 0 }, { id: 'fork', x: 790, f: 1, h: 72 }, { id: 'paperclip', x: 952, f: 1, h: 92 }],
+    pranks: ['chairGlue', 'cabinetTape', 'binWater', 'whisky', 'toasterFork', 'stoveDial', 'switchBell', 'sofaGum', 'doorHorn'],
+    items: [{ id: 'gum', x: 30, f: 0, h: 0 }, { id: 'pondwater', x: 80, f: 0, h: 0 }, { id: 'bucket', x: 132, f: 0, h: 0 }, { id: 'cable', x: 440, f: 0, h: 0 }, { id: 'gluegun', x: 1062, f: 0, h: 0 }, { id: 'tape', x: 1120, f: 1, h: 0 }, { id: 'fork', x: 790, f: 1, h: 72 }, { id: 'paperclip', x: 952, f: 1, h: 92 }, { id: 'airhorn', x: 150, f: 0, h: 52 }],
     routine: [['stove', 6], ['toaster', 5], ['table', 8], ['cabinet', 4], ['bin', 4], ['drinks', 6], ['switch', 3], ['sofa', 9]],
+    traps: [{ kind: 'squeak', x: 700, f: 0 }],
   },
   {
-    name: 'The Last Straw', time: 330, speed: 1.15, shot: '#3e2a44', theme: 'halloween',
+    name: 'The Last Straw', time: 380, speed: 1.15, shot: '#3e2a44', theme: 'halloween',
     text: 'Halloween. He switched his porch light off and handed out toothbrushes. Today you use everything you know.',
     tip: 'Plan two combos: wet kitchen floor plus the fridge, and the glued remote plus the TV.',
-    pranks: ['kettleSalt', 'sinkTap', 'fridgeWire', 'tilesSoap', 'chairGlue', 'remoteGlue', 'tvWires', 'whisky', 'switchBell', 'stoveDial', 'sofaGum'],
+    pranks: ['kettleSalt', 'sinkTap', 'fridgeWire', 'tilesSoap', 'chairGlue', 'remoteGlue', 'tvWires', 'whisky', 'switchBell', 'stoveDial', 'sofaGum', 'soupChilli', 'fishAlarm'],
     items: [
       { id: 'wrench', x: 30, f: 0, h: 0 }, { id: 'screwdriver', x: 80, f: 0, h: 0 }, { id: 'superglue', x: 132, f: 0, h: 0 }, { id: 'pondwater', x: 150, f: 0, h: 52 },
       { id: 'cable', x: 440, f: 0, h: 0 }, { id: 'gluegun', x: 1062, f: 0, h: 0 }, { id: 'pliers', x: 1120, f: 1, h: 0 }, { id: 'soap', x: 258, f: 1, h: 0 },
-      { id: 'salt', x: 668, f: 1, h: 122 }, { id: 'gum', x: 790, f: 1, h: 72 }, { id: 'paperclip', x: 952, f: 1, h: 92 },
+      { id: 'salt', x: 668, f: 1, h: 122 }, { id: 'gum', x: 790, f: 1, h: 72 }, { id: 'paperclip', x: 952, f: 1, h: 92 }, { id: 'chilli', x: 600, f: 0, h: 0 }, { id: 'alarmclock', x: 880, f: 1, h: 0 },
     ],
     routine: [['sofa', 10], ['remote', 3], ['tv', 7], ['drinks', 5], ['kettle', 6], ['fridge', 5], ['stove', 6], ['table', 8], ['switch', 3]],
+    traps: [{ kind: 'squeak', x: 700, f: 0 }, { kind: 'bucket', x: 620, f: 1 }],
   },
   {
-    name: 'Car Show Sunday', map: 'garage', time: 220, shot: '#2f6fa8', theme: 'sunny',
+    name: 'Car Show Sunday', map: 'garage', time: 245, shot: '#2f6fa8', theme: 'sunny',
     text: "New place: Gerald's garage. His classic car is entered in tomorrow's show, and he spends all day out here polishing it.",
     tip: 'The oily floor between the car and the workbench is a walk-over trap. Set it while he is up in the den.',
-    pranks: ['carHandle', 'oilSlick', 'benchGlue', 'radioWire', 'dartsTape'],
-    items: [{ id: 'superglue', x: 40, f: 0, h: 0 }, { id: 'soap', x: 80, f: 0, h: 0 }, { id: 'gluegun', x: 132, f: 0, h: 0 }, { id: 'pliers', x: 1062, f: 0, h: 0 }, { id: 'tape', x: 1120, f: 1, h: 0 }],
+    pranks: ['carHandle', 'oilSlick', 'benchGlue', 'radioWire', 'dartsTape', 'benchMouse'],
+    items: [{ id: 'superglue', x: 40, f: 0, h: 0 }, { id: 'soap', x: 80, f: 0, h: 0 }, { id: 'gluegun', x: 132, f: 0, h: 0 }, { id: 'pliers', x: 1062, f: 0, h: 0 }, { id: 'tape', x: 1120, f: 1, h: 0 }, { id: 'mouse', x: 640, f: 0, h: 0 }],
     routine: [['car', 8], ['bench', 7], ['radio', 5], ['darts', 6], ['trophies', 5], ['minifridge', 4]],
   },
   {
-    name: 'Fuse Box Frenzy', map: 'garage', time: 250, speed: 1.1, shot: '#3a3d5a', theme: 'storm',
+    name: 'Fuse Box Frenzy', map: 'garage', time: 275, speed: 1.1, shot: '#3a3d5a', theme: 'storm',
     text: 'A storm knocks the power about, and Gerald keeps going back to the fuse box. Swapping the fuses blacks out the workshop.',
     tip: 'He dozes in the rocking chair and can\'t see you then. That is your window for the loft.',
-    pranks: ['fuseBox', 'trainsTrack', 'rockerGum', 'trophyBucket', 'lemonade', 'carHandle'],
-    items: [{ id: 'screwdriver', x: 30, f: 0, h: 0 }, { id: 'superglue', x: 80, f: 0, h: 0 }, { id: 'bucket', x: 132, f: 0, h: 0 }, { id: 'pondwater', x: 150, f: 0, h: 52 }, { id: 'paperclip', x: 1062, f: 0, h: 0 }, { id: 'gum', x: 1120, f: 1, h: 0 }],
+    pranks: ['fuseBox', 'trainsTrack', 'rockerGum', 'trophyBucket', 'lemonade', 'carHandle', 'dartsHorn'],
+    items: [{ id: 'screwdriver', x: 30, f: 0, h: 0 }, { id: 'superglue', x: 80, f: 0, h: 0 }, { id: 'bucket', x: 132, f: 0, h: 0 }, { id: 'pondwater', x: 150, f: 0, h: 52 }, { id: 'paperclip', x: 1062, f: 0, h: 0 }, { id: 'gum', x: 1120, f: 1, h: 0 }, { id: 'airhorn', x: 640, f: 0, h: 0 }],
     routine: [['trains', 8], ['rocker', 10], ['fusebox', 4], ['bench', 6], ['car', 7], ['minifridge', 4], ['trophies', 5]],
+    traps: [{ kind: 'squeak', x: 780, f: 1 }],
   },
   {
-    name: 'Oil Change', map: 'garage', time: 230, speed: 1.05, shot: '#56616d', theme: 'rain',
+    name: 'Oil Change', map: 'garage', time: 255, speed: 1.05, shot: '#56616d', theme: 'rain',
     text: "It's chucking it down, so Gerald is changing the car's oil and polishing every trophy he owns. Mostly water today, with a dab of glue.",
     tip: 'Glue his hand to the car door first. Anything that hits him while he is stuck counts as a combo.',
-    pranks: ['carHandle', 'oilSlick', 'trophyBucket', 'lemonade', 'benchGlue'],
-    items: [{ id: 'superglue', x: 30, f: 0, h: 0 }, { id: 'soap', x: 80, f: 0, h: 0 }, { id: 'bucket', x: 132, f: 0, h: 0 }, { id: 'pondwater', x: 1062, f: 0, h: 0 }, { id: 'gluegun', x: 1120, f: 1, h: 0 }],
+    pranks: ['carHandle', 'oilSlick', 'trophyBucket', 'lemonade', 'benchGlue', 'popChilli'],
+    items: [{ id: 'superglue', x: 30, f: 0, h: 0 }, { id: 'soap', x: 80, f: 0, h: 0 }, { id: 'bucket', x: 132, f: 0, h: 0 }, { id: 'pondwater', x: 1062, f: 0, h: 0 }, { id: 'gluegun', x: 1120, f: 1, h: 0 }, { id: 'chilli', x: 640, f: 0, h: 0 }],
     routine: [['car', 8], ['minifridge', 4], ['bench', 7], ['trophies', 6], ['radio', 5], ['darts', 5]],
   },
   {
-    name: 'Model Village Mayhem', map: 'garage', time: 260, speed: 1.1, shot: '#c0602e', theme: 'autumn',
+    name: 'Model Village Mayhem', map: 'garage', time: 285, speed: 1.1, shot: '#c0602e', theme: 'autumn',
     text: 'Gerald has spent all autumn on his model railway and he will not stop talking about it. Glue and electricity today.',
     tip: "He can't see you while he dozes in the rocking chair, but he can still hear you. Save the noisy electric pranks for when he's downstairs.",
-    pranks: ['trainsTrack', 'rockerGum', 'dartsTape', 'radioWire', 'benchGlue', 'fuseBox'],
-    items: [{ id: 'paperclip', x: 30, f: 0, h: 0 }, { id: 'gum', x: 80, f: 0, h: 0 }, { id: 'tape', x: 132, f: 0, h: 0 }, { id: 'pliers', x: 1062, f: 0, h: 0 }, { id: 'gluegun', x: 1120, f: 1, h: 0 }, { id: 'screwdriver', x: 640, f: 0, h: 0 }],
+    pranks: ['trainsTrack', 'rockerGum', 'dartsTape', 'radioWire', 'benchGlue', 'fuseBox', 'trainBees'],
+    items: [{ id: 'paperclip', x: 30, f: 0, h: 0 }, { id: 'gum', x: 80, f: 0, h: 0 }, { id: 'tape', x: 132, f: 0, h: 0 }, { id: 'pliers', x: 1062, f: 0, h: 0 }, { id: 'gluegun', x: 1120, f: 1, h: 0 }, { id: 'screwdriver', x: 640, f: 0, h: 0 }, { id: 'beejar', x: 420, f: 1, h: 0 }],
     routine: [['trains', 8], ['rocker', 10], ['darts', 5], ['bench', 6], ['radio', 5], ['fusebox', 4], ['car', 6]],
+    traps: [{ kind: 'bucket', x: 680, f: 0 }],
   },
   {
-    name: 'Fright Night', map: 'garage', time: 340, speed: 1.15, shot: '#3e2a44', theme: 'halloween',
+    name: 'Fright Night', map: 'garage', time: 390, speed: 1.15, shot: '#3e2a44', theme: 'halloween',
     text: "Halloween again, and he's hiding in the garage so he doesn't have to hand out sweets. He can't hide from you. Every prank in the garage, all in one night.",
     tip: 'Every glue prank leaves something stuck to him for a while. Land a second prank before it comes off for a combo.',
-    pranks: ['carHandle', 'oilSlick', 'benchGlue', 'radioWire', 'dartsTape', 'fuseBox', 'trainsTrack', 'rockerGum', 'trophyBucket', 'lemonade'],
+    pranks: ['carHandle', 'oilSlick', 'benchGlue', 'radioWire', 'dartsTape', 'fuseBox', 'trainsTrack', 'rockerGum', 'trophyBucket', 'lemonade', 'radioAlarm', 'trainBees'],
     items: [
       { id: 'superglue', x: 30, f: 0, h: 0 }, { id: 'soap', x: 80, f: 0, h: 0 }, { id: 'bucket', x: 132, f: 0, h: 0 }, { id: 'pondwater', x: 150, f: 0, h: 52 },
       { id: 'screwdriver', x: 1062, f: 0, h: 0 }, { id: 'pliers', x: 1120, f: 1, h: 0 }, { id: 'gluegun', x: 640, f: 0, h: 0 }, { id: 'tape', x: 420, f: 1, h: 0 },
-      { id: 'gum', x: 760, f: 1, h: 0 }, { id: 'paperclip', x: 580, f: 1, h: 0 },
+      { id: 'gum', x: 760, f: 1, h: 0 }, { id: 'paperclip', x: 580, f: 1, h: 0 }, { id: 'alarmclock', x: 920, f: 0, h: 0 }, { id: 'beejar', x: 300, f: 1, h: 0 },
     ],
     routine: [['car', 7], ['bench', 6], ['radio', 5], ['fusebox', 4], ['trains', 7], ['rocker', 9], ['darts', 5], ['minifridge', 4], ['trophies', 5]],
+    traps: [{ kind: 'squeak', x: 780, f: 1 }, { kind: 'bucket', x: 680, f: 0 }],
   },
   {
-    name: 'Beach Holiday', map: 'beach', time: 230, shot: '#3fa7c0', theme: 'sunny',
+    name: 'Beach Holiday', map: 'beach', time: 255, shot: '#3fa7c0', theme: 'sunny',
     text: "New place: Gerald rented a seaside chalet to get away from you. He didn't get away from you.",
     tip: 'A smoothie to the face sends him straight to the shower. Fill the tank with pond water first.',
-    pranks: ['deckGum', 'lollySalt', 'blenderFork', 'showerPond', 'hammockGlue'],
-    items: [{ id: 'gum', x: 40, f: 0, h: 0 }, { id: 'salt', x: 80, f: 0, h: 0 }, { id: 'pondwater', x: 132, f: 0, h: 0 }, { id: 'fork', x: 1062, f: 0, h: 0 }, { id: 'gluegun', x: 1120, f: 1, h: 0 }],
+    pranks: ['deckGum', 'lollySalt', 'blenderFork', 'showerPond', 'hammockGlue', 'hammockCrab'],
+    items: [{ id: 'gum', x: 40, f: 0, h: 0 }, { id: 'salt', x: 80, f: 0, h: 0 }, { id: 'pondwater', x: 132, f: 0, h: 0 }, { id: 'fork', x: 1062, f: 0, h: 0 }, { id: 'gluegun', x: 1120, f: 1, h: 0 }, { id: 'crab', x: 600, f: 0, h: 0 }],
     routine: [['deckchair', 9], ['freezer', 4], ['blender', 6], ['telescope', 5], ['hammock', 10], ['shower', 6]],
   },
   {
-    name: 'Sunset Showdown', map: 'beach', time: 300, speed: 1.15, shot: '#e0705a', theme: 'sunset',
+    name: 'Sunset Showdown', map: 'beach', time: 325, speed: 1.15, shot: '#e0705a', theme: 'sunset',
     text: 'His last night at the seaside. He packs, he shaves, he showers, he watches the sunset. You ruin every bit of it.',
     tip: 'The bathroom tiles are a walk-over trap between the mirror and the shower. Soap them while he is downstairs.',
-    pranks: ['suncreamGlue', 'razorZap', 'fanWires', 'bathSoap', 'scopeTape', 'lollySalt', 'blenderFork', 'showerPond'],
+    pranks: ['suncreamGlue', 'razorZap', 'fanWires', 'bathSoap', 'scopeTape', 'lollySalt', 'blenderFork', 'showerPond', 'deckAlarm'],
     items: [
       { id: 'superglue', x: 30, f: 0, h: 0 }, { id: 'cable', x: 80, f: 0, h: 0 }, { id: 'salt', x: 132, f: 0, h: 0 }, { id: 'pondwater', x: 150, f: 0, h: 52 },
-      { id: 'pliers', x: 1062, f: 0, h: 0 }, { id: 'soap', x: 1120, f: 1, h: 0 }, { id: 'tape', x: 600, f: 0, h: 0 }, { id: 'fork', x: 880, f: 0, h: 58 },
+      { id: 'pliers', x: 1062, f: 0, h: 0 }, { id: 'soap', x: 1120, f: 1, h: 0 }, { id: 'tape', x: 600, f: 0, h: 0 }, { id: 'fork', x: 880, f: 0, h: 58 }, { id: 'alarmclock', x: 420, f: 1, h: 0 },
     ],
     routine: [['dresser', 5], ['mirror', 5], ['telescope', 5], ['fan', 3], ['deckchair', 8], ['freezer', 4], ['blender', 6], ['shower', 6], ['hammock', 8]],
+    traps: [{ kind: 'squeak', x: 500, f: 0 }],
   },
   {
-    name: 'Rainy Resort', map: 'beach', time: 240, speed: 1.05, shot: '#5f86a6', theme: 'rain',
+    name: 'Rainy Resort', map: 'beach', time: 265, speed: 1.05, shot: '#5f86a6', theme: 'rain',
     text: "He came back to the chalet for another week, and it hasn't stopped raining. He's stuck indoors shaving, showering and sulking. Water and electricity today.",
     tip: 'Soap the bathroom tiles, then overload his razor. Electricity in a wet room is a combo.',
-    pranks: ['bathSoap', 'showerPond', 'lollySalt', 'razorZap', 'fanWires'],
-    items: [{ id: 'soap', x: 30, f: 0, h: 0 }, { id: 'pondwater', x: 80, f: 0, h: 0 }, { id: 'salt', x: 132, f: 0, h: 0 }, { id: 'cable', x: 1062, f: 0, h: 0 }, { id: 'pliers', x: 1120, f: 1, h: 0 }],
-    routine: [['mirror', 5], ['fan', 3], ['freezer', 4], ['shower', 6], ['dresser', 5], ['telescope', 5], ['hammock', 9]],
+    pranks: ['bathSoap', 'showerPond', 'lollySalt', 'razorZap', 'fanWires', 'smoothieChilli'],
+    items: [{ id: 'soap', x: 30, f: 0, h: 0 }, { id: 'pondwater', x: 80, f: 0, h: 0 }, { id: 'salt', x: 132, f: 0, h: 0 }, { id: 'cable', x: 1062, f: 0, h: 0 }, { id: 'pliers', x: 1120, f: 1, h: 0 }, { id: 'chilli', x: 600, f: 0, h: 0 }],
+    routine: [['mirror', 5], ['fan', 3], ['freezer', 4], ['shower', 6], ['dresser', 5], ['telescope', 5], ['hammock', 9], ['blender', 6]],
   },
   {
-    name: 'Beach Party', map: 'beach', time: 270, speed: 1.1, shot: '#e07bb0', theme: 'party',
+    name: 'Beach Party', map: 'beach', time: 295, speed: 1.1, shot: '#e07bb0', theme: 'party',
     text: "Gerald is throwing a beach party and you're not invited. Bring the glue anyway.",
     tip: 'He snoozes in the deckchair and the hammock. While he does, he can\'t see you, so set up the pranks in that room.',
-    pranks: ['deckGum', 'hammockGlue', 'suncreamGlue', 'scopeTape', 'blenderFork', 'lollySalt'],
-    items: [{ id: 'gum', x: 30, f: 0, h: 0 }, { id: 'gluegun', x: 80, f: 0, h: 0 }, { id: 'superglue', x: 132, f: 0, h: 0 }, { id: 'tape', x: 1062, f: 0, h: 0 }, { id: 'fork', x: 1120, f: 1, h: 0 }, { id: 'salt', x: 600, f: 0, h: 0 }],
+    pranks: ['deckGum', 'hammockGlue', 'suncreamGlue', 'scopeTape', 'blenderFork', 'lollySalt', 'showerGull'],
+    items: [{ id: 'gum', x: 30, f: 0, h: 0 }, { id: 'gluegun', x: 80, f: 0, h: 0 }, { id: 'superglue', x: 132, f: 0, h: 0 }, { id: 'tape', x: 1062, f: 0, h: 0 }, { id: 'fork', x: 1120, f: 1, h: 0 }, { id: 'salt', x: 600, f: 0, h: 0 }, { id: 'chips', x: 420, f: 1, h: 0 }],
     routine: [['blender', 6], ['deckchair', 8], ['telescope', 5], ['freezer', 4], ['dresser', 5], ['hammock', 9], ['shower', 6]],
+    traps: [{ kind: 'bucket', x: 640, f: 0 }],
   },
   {
-    name: 'Storm Surge', map: 'beach', time: 350, speed: 1.2, shot: '#1f2236', theme: 'storm',
+    name: 'Storm Surge', map: 'beach', time: 400, speed: 1.2, shot: '#1f2236', theme: 'storm',
     text: 'He stayed one more night at the seaside. Bad idea. A storm rolls in off the sea, the lights flicker, and you use every prank in the chalet.',
     tip: 'Wiring the fan plunges the lounge into darkness. He has to cross it to get anywhere, so set your downstairs pranks first.',
-    pranks: ['deckGum', 'lollySalt', 'blenderFork', 'hammockGlue', 'showerPond', 'suncreamGlue', 'razorZap', 'fanWires', 'bathSoap', 'scopeTape'],
+    pranks: ['deckGum', 'lollySalt', 'blenderFork', 'hammockGlue', 'showerPond', 'suncreamGlue', 'razorZap', 'fanWires', 'bathSoap', 'scopeTape', 'scopeHorn', 'hammockCrab'],
     items: [
       { id: 'gum', x: 30, f: 0, h: 0 }, { id: 'salt', x: 80, f: 0, h: 0 }, { id: 'pondwater', x: 132, f: 0, h: 0 }, { id: 'superglue', x: 150, f: 0, h: 52 },
       { id: 'fork', x: 1062, f: 0, h: 0 }, { id: 'cable', x: 1120, f: 1, h: 0 }, { id: 'pliers', x: 600, f: 0, h: 0 }, { id: 'soap', x: 880, f: 0, h: 58 },
-      { id: 'tape', x: 420, f: 1, h: 0 }, { id: 'gluegun', x: 600, f: 1, h: 0 },
+      { id: 'tape', x: 420, f: 1, h: 0 }, { id: 'gluegun', x: 600, f: 1, h: 0 }, { id: 'airhorn', x: 760, f: 1, h: 0 }, { id: 'crab', x: 380, f: 0, h: 0 },
     ],
     routine: [['dresser', 5], ['mirror', 5], ['telescope', 5], ['fan', 3], ['deckchair', 8], ['freezer', 4], ['blender', 6], ['shower', 6], ['hammock', 8]],
+    traps: [{ kind: 'squeak', x: 500, f: 0 }, { kind: 'bucket', x: 640, f: 0 }],
   },
 ];
 
@@ -966,6 +996,10 @@ function sfx(n) {
     case 'huh': seq([300, 420], .1, 'sine'); break;
     case 'win': seq([523, 659, 784, 1046], .14, 'triangle'); break;
     case 'lose': seq([392, 330, 262, 196], .18, 'triangle'); break;
+    case 'animal': seq([1800, 2400, 1700, 2600], .05, 'square'); noise(.4, .05, 'highpass', 3000); break;   // squeaks and scurrying
+    case 'food': tone(140, .5, 'sine', .09, 60); setTimeout(() => noise(.6, .1, 'bandpass', 900, 300), 120); break;   // a gulp, then a gasp
+    case 'noise': for (let i = 0; i < 8; i++) setTimeout(() => tone(i % 2 ? 1320 : 1180, .07, 'square', .05), i * 70); break;   // an alarm bell
+    case 'squeak': tone(420, .25, 'sawtooth', .05, 300); setTimeout(() => tone(380, .2, 'sawtooth', .04, 260), 160); break;   // a creaking board
     case 'gag': { const o = tone(150, .7, 'sawtooth', .08, 70); if (o && AC) { const l = AC.createOscillator(), lg = AC.createGain(); l.frequency.value = 26; lg.gain.value = 40; l.connect(lg).connect(o.frequency); l.start(); l.stop(AC.currentTime + .7); } noise(.5, .05, 'lowpass', 500, 200); break; }   // a raspberry
   }
 }
@@ -1011,6 +1045,14 @@ function drawItem(c, id, x, y, s = 1) {
     case 'fork': c.lineCap = 'round'; c.strokeStyle = INK; c.lineWidth = 6; line(c, 0, 12, 0, -4); c.strokeStyle = '#c9d0d6'; c.lineWidth = 3; line(c, 0, 12, 0, -4); c.strokeStyle = INK; c.lineWidth = 2; [-4, 0, 4].forEach(dx => line(c, dx, -4, dx, -13)); line(c, -4, -4, 4, -4); break;
     case 'pliers': c.lineCap = 'round'; c.strokeStyle = INK; c.lineWidth = 7; line(c, -8, 12, 2, -2); line(c, 8, 12, -2, -2); c.strokeStyle = '#d9442e'; c.lineWidth = 4; line(c, -8, 12, -1, 2); line(c, 8, 12, 1, 2); c.strokeStyle = '#9aa3ad'; line(c, 0, 0, -3, -12); line(c, 0, 0, 3, -12); break;
     case 'cable': c.strokeStyle = INK; c.lineWidth = 6; c.beginPath(); c.arc(-2, 2, 8, 0, Math.PI * 1.7); c.stroke(); c.strokeStyle = '#f08a24'; c.lineWidth = 3.5; c.stroke(); rr(c, 4, -12, 10, 8, 2); fs(c, '#f7f3e3', INK, k); c.strokeStyle = INK; line(c, 7, -12, 7, -16); line(c, 11, -12, 11, -16); break;
+    case 'mouse': rr(c, -11, -4, 22, 15, 2); fs(c, '#c49a6c', INK, k); c.fillStyle = 'rgba(0,0,0,.35)'; for (let i = -6; i <= 6; i += 4) c.fillRect(i, -1, 2, 2); ell(c, 3, -8, 7, 5); fs(c, '#9aa3ad', INK, k); circle(c, 8, -12, 2.5); fs(c, '#f2b9a0', INK, 1.5); c.strokeStyle = INK; c.lineWidth = 1.5; c.beginPath(); c.moveTo(-4, -8); c.quadraticCurveTo(-12, -14, -14, -6); c.stroke(); break;
+    case 'beejar': rr(c, -9, -10, 18, 22, 5); fs(c, 'rgba(220,240,245,.85)', INK, k); rr(c, -10, -14, 20, 5, 2); fs(c, '#c49a6c', INK, k); for (const [bx, by] of [[-3, -2], [4, 3], [-2, 7]]) { ell(c, bx, by, 3.5, 2.5); fs(c, '#f5c400', INK, 1.2); } break;
+    case 'crab': poly(c, [[-11, -6], [11, -6], [8, 12], [-8, 12]]); fs(c, '#3fa7c0', INK, k); ell(c, 0, -8, 8, 5); fs(c, '#d9442e', INK, k); circle(c, -9, -13, 3.5); fs(c, '#d9442e', INK, 1.5); circle(c, 9, -13, 3.5); fs(c, '#d9442e', INK, 1.5); break;
+    case 'chips': poly(c, [[-9, 12], [9, 12], [11, -4], [-11, -4]]); fs(c, '#efe7d4', INK, k); c.fillStyle = '#e8b84a'; for (const dx of [-7, -3, 1, 5]) { c.fillRect(dx, -14 + (dx & 3), 3, 12); } c.strokeStyle = INK; c.lineWidth = 1; for (const dx of [-7, -3, 1, 5]) c.strokeRect(dx, -14 + (dx & 3), 3, 12); break;
+    case 'chilli': c.beginPath(); c.moveTo(-10, -8); c.quadraticCurveTo(10, -8, 8, 12); c.quadraticCurveTo(-2, 0, -10, -2); c.closePath(); fs(c, '#d9442e', INK, k); c.strokeStyle = '#4f7a3a'; c.lineWidth = 3; line(c, -10, -6, -14, -12); break;
+    case 'prunes': rr(c, -7, -6, 14, 18, 3); fs(c, '#5a2a4a', INK, k); rr(c, -4, -12, 8, 6, 1); fs(c, '#5a2a4a', INK, k); rr(c, -6, 0, 12, 6, 1); fs(c, '#efe7d4', INK, 1); break;
+    case 'alarmclock': circle(c, 0, 2, 10); fs(c, '#d9442e', INK, k); circle(c, 0, 2, 7); fs(c, '#fbf4df', INK, 1.5); circle(c, -7, -8, 3.5); fs(c, '#c9a227', INK, 1.5); circle(c, 7, -8, 3.5); fs(c, '#c9a227', INK, 1.5); c.strokeStyle = INK; c.lineWidth = 1.5; line(c, 0, 2, 0, -3); line(c, 0, 2, 4, 2); break;
+    case 'airhorn': rr(c, -11, -3, 10, 14, 3); fs(c, '#d9442e', INK, k); poly(c, [[-1, 0], [10, -8], [10, 14], [-1, 7]]); fs(c, '#c9d0d6', INK, k); break;
     case 'whoopee': ell(c, 0, 2, 13, 9); fs(c, '#e0567a', INK, k); ell(c, -3, -1, 5, 3); c.fillStyle = 'rgba(255,255,255,.5)'; c.fill(); rr(c, 10, -1, 8, 6, 2); fs(c, '#e0567a', INK, k); break;
     case 'banana': c.lineCap = 'round'; c.strokeStyle = INK; c.lineWidth = 9; c.beginPath(); c.arc(0, -10, 16, Math.PI * .25, Math.PI * .8); c.stroke(); c.strokeStyle = '#f2d14b'; c.lineWidth = 5.5; c.stroke(); c.fillStyle = '#5b4232'; circle(c, 11, 1, 2.5); c.fill(); break;
     case 'stinkbomb': circle(c, 0, 3, 10); fs(c, '#6b8f3a', INK, k); rr(c, -3, -11, 6, 6, 1); fs(c, '#9aa3ad', INK, k); c.strokeStyle = '#8fbf4a'; c.lineWidth = 2; for (const dx of [-8, 0, 8]) { c.beginPath(); c.moveTo(dx, -12); c.quadraticCurveTo(dx + 4, -16, dx, -20); c.stroke(); } break;
@@ -2217,7 +2259,7 @@ function star(c, x, y, r, col) {
 }
 function bolt(c, x, y, s, col) { poly(c, [[x - 2 * s, y - 8 * s], [x + 4 * s, y - 8 * s], [x, y - 1 * s], [x + 4 * s, y - 1 * s], [x - 4 * s, y + 9 * s], [x - 1 * s, y + 1 * s], [x - 5 * s, y + 1 * s]]); fs(c, col, INK, 2); }
 function drop(c, x, y, s, col) { c.beginPath(); c.moveTo(x, y - 9 * s); c.quadraticCurveTo(x + 7 * s, y + 1 * s, x, y + 6 * s); c.quadraticCurveTo(x - 7 * s, y + 1 * s, x, y - 9 * s); fs(c, col, INK, 2); }
-function famIcon(c, fam, x, y, s) { if (fam === 'gag') { star(c, x, y, 8 * s, FAM.gag.col); return; } if (fam === 'elec') bolt(c, x, y, s, FAM.elec.col); else if (fam === 'water') drop(c, x, y, s, FAM.water.col); else { ell(c, x, y, 7 * s, 6 * s); fs(c, FAM.glue.col, INK, 2); c.fillStyle = 'rgba(255,255,255,.7)'; circle(c, x - 2 * s, y - 2 * s, 2 * s); c.fill(); } }
+function famIcon(c, fam, x, y, s) { if (fam === 'gag') { star(c, x, y, 8 * s, FAM.gag.col); return; } if (fam === 'animal' || fam === 'food' || fam === 'noise') { circle(c, x, y, 7 * s); fs(c, FAM[fam].col, INK, 2); return; } if (fam === 'elec') bolt(c, x, y, s, FAM.elec.col); else if (fam === 'water') drop(c, x, y, s, FAM.water.col); else { ell(c, x, y, 7 * s, 6 * s); fs(c, FAM.glue.col, INK, 2); c.fillStyle = 'rgba(255,255,255,.7)'; circle(c, x - 2 * s, y - 2 * s, 2 * s); c.fill(); } }
 
 /* ---------- game state ---------- */
 let G = null, mode = 'menu', paused = false, perf = 0, hover = null;
@@ -2269,7 +2311,9 @@ function newGame(i) {
     player: { x: 60, y: FY[0], path: [], target: null, hidden: null, work: null, dir: 1, phase: 0, invuln: 0, caught: false, cheer: 0, pipeNoise: false },
     br: { x: 1080, y: FY[0], path: [], dir: -1, phase: 0, state: 'idle', t: 3, el: 0, cur: null, idx: 0, queue: [], reacts: [], thens: [], fromWalk: false,
           anger: 0, angerT: 0, rush: false, say: null, sayT: 0, seen: 0, resume: null, prop: null, soot: 0, wet: 0, reactFam: null },
-    wet: {}, dark: {}, fx: [], parts: [], fxAt: {}, blown: {}, blownAt: {}, snaps: [],
+    wet: {}, dark: {}, fx: [], parts: [], fxAt: {}, blown: {}, blownAt: {}, snaps: [], anims: [],
+    wary: [], missing: [], foundHide: null,
+    traps: (L.traps || []).map(t => ({ ...t, off: false, cool: 0 })),
   };
   renderTray(); renderChecklist(); updateHud(true);
   $('dayName').textContent = `Day ${i + 1}: ${L.name}`;
@@ -2279,6 +2323,7 @@ function targets() {
   const out = [];
   for (const it of G.items) if (!it.taken) out.push({ kind: 'item', it, x: it.x, f: it.f, h: it.h, name: ITEMS[it.id] });
   for (const id in HIDES) { const h = HIDES[id]; out.push({ kind: 'hide', id, x: h.x, f: h.f, h: 70, name: h.name }); }
+  for (const tr of G.traps) if (!tr.off) out.push({ kind: 'trap', tr, x: tr.x, f: tr.f, h: tr.kind === 'bucket' ? 150 : 20, name: TRAP_NAME[tr.kind] });
   for (const pr of G.pranks) if (!pr.done) { const s = SPOTS[pr.spot]; out.push({ kind: 'prank', pr, x: s.x, f: s.f, h: s.mh, name: pr.name }); }
   return out;
 }
@@ -2298,6 +2343,7 @@ function interact(t) {
   const P = G.player;
   if (t.kind === 'item') { if (!t.it.taken) P.work = { kind: 'item', t: 0, total: .5, obj: t }; }
   else if (t.kind === 'hide') { P.hidden = t.id; toast(`Hiding: ${t.name}`); sfx('hide'); }
+  else if (t.kind === 'trap') { if (!t.tr.off) P.work = { kind: 'trap', t: 0, total: 1.2, obj: t }; }
   else if (t.kind === 'prank') {
     const pr = t.pr;
     if (pr.done) return;
@@ -2307,10 +2353,18 @@ function interact(t) {
     if (pr.fam === 'elec') emitNoise(P.x, floorOf(P.y), 'buzz');
   }
 }
+const TRAP_NAME = { squeak: 'Squeaky floorboard', bucket: 'Bucket over the door' };
 function finishWork() {
   const P = G.player, w = P.work; P.work = null;
-  if (w.kind === 'item') { w.obj.it.taken = true; G.inv.push(w.obj.it.id); toast(`Got the ${ITEMS[w.obj.it.id].toLowerCase()}`); sfx('pick'); renderTray(w.obj.it.id); }
-  else { const pr = w.obj.pr; if (pr.need) G.inv.splice(G.inv.indexOf(pr.need), 1); renderTray(); pr.armed = true; toast(`Set: ${pr.name}`); sfx('set'); renderChecklist(); }
+  if (w.kind === 'item') {
+    const it = w.obj.it; it.taken = true; G.inv.push(it.id); toast(`Got the ${ITEMS[it.id].toLowerCase()}`); sfx('pick'); renderTray(it.id);
+    if (it.x >= 200 && Math.random() < .6) G.missing.push(it);   // taken from inside his house: he may notice it's gone
+  }
+  else if (w.kind === 'trap') { w.obj.tr.off = true; toast(`Disarmed: ${TRAP_NAME[w.obj.tr.kind].toLowerCase()}`); sfx('set'); }
+  else {
+    const pr = w.obj.pr; if (pr.need) G.inv.splice(G.inv.indexOf(pr.need), 1); renderTray(); pr.armed = true; sfx('set'); renderChecklist();
+    if (pr.timer) { pr.fireAt = G.t + pr.timer; toast(`Set: ${pr.name}. Goes off in ${pr.timer} seconds.`); } else toast(`Set: ${pr.name}`);
+  }
 }
 
 function curPos(cur) { if (cur.spot) { const s = SPOTS[cur.spot]; return [s.x, s.f]; } return [cur.x, cur.f]; }
@@ -2318,7 +2372,16 @@ function actLabel(cur) { return cur.label || SPOTS[cur.spot].act; }
 function walkTo(cur) { const B = G.br, [x, f] = curPos(cur); B.cur = cur; B.path = plan(B.x, B.y, x, f, false); B.state = 'walk'; }
 function nextAct() {
   const B = G.br, R = G.L.routine;
-  const cur = B.queue.shift() || (() => { const r = R[B.idx++ % R.length]; return { spot: r[0], dur: r[1] }; })();
+  let cur = B.queue.shift();
+  if (!cur && G.missing.length && Math.random() < .5) {
+    const it = G.missing.shift();
+    cur = { x: clamp(it.x, 214, 1170), f: it.f, dur: 2.2, investigate: true, label: `Where's my ${ITEMS[it.id].toLowerCase()}?!` };
+    say(`Hang on... where's my ${ITEMS[it.id].toLowerCase()}?`, 1.8);
+  } else if (!cur && G.wary.length && Math.random() < .22) {
+    const s = SPOTS[G.wary[Math.floor(Math.random() * G.wary.length)]];
+    cur = { x: s.x, f: s.f, dur: 1.6, investigate: true, label: 'Just checking...' };
+  }
+  cur = cur || (() => { const r = R[B.idx++ % R.length]; return { spot: r[0], dur: r[1] }; })();
   B.rush = !!cur.rush; walkTo(cur);
 }
 function say(text, t) { G.br.say = text; G.br.sayT = t; }
@@ -2336,6 +2399,9 @@ function fireOne(pr) {
   const B = G.br, P = G.player, room = roomAt(B.x, B.y);
   pr.done = true; pr.armed = false;
   if (pr.then) B.thens.push(pr.then);
+  if (pr.flee) B.flee = pr.flee;
+  if (!SPOTS[pr.spot].walk && !G.wary.includes(pr.spot)) G.wary.push(pr.spot);
+  startAnim(pr);
   let combo = null;
   if (pr.fam === 'elec' && (G.wet[room] || 0) > 0) combo = 'Water + electricity';
   else if (pr.fam === 'elec' && B.prop) combo = 'Glue + electricity';
@@ -2346,7 +2412,7 @@ function fireOne(pr) {
   G.score += pts; if (combo) G.combos++;
   if (pr.wet) G.wet[pr.wet] = 20;
   if (pr.dark) G.dark[pr.dark] = 20;
-  if (pr.fam !== 'gag') { G.blown[pr.spot] = true; G.blownAt[pr.spot] = G.t; }
+  if (pr.fam === 'glue' || pr.fam === 'water' || pr.fam === 'elec') { G.blown[pr.spot] = true; G.blownAt[pr.spot] = G.t; }   // only these wreck the prop's picture
   if (pr.prop) B.prop = { kind: pr.prop, t: 14 };
   if (pr.soot) B.soot = 14;
   if (pr.soak) B.wet = 10;
@@ -2377,6 +2443,123 @@ function fireOne(pr) {
   if (pr.spot === 'switch') setTimeout(() => sfx('bell'), 250);
   renderChecklist(); updateHud(true);
 }
+/* ---------- prank animations ----------
+   Each landed prank plays a short animated moment between the prop and Gerald, on top of his reaction pose. */
+const ANIM_FOR = { mouse: 'mouse', beejar: 'bees', crab: 'crab', chips: 'gulls' };
+function startAnim(pr) {
+  const B = G.br, s = SPOTS[pr.spot], sx = s.x, sy = FY[s.f] - (s.walk ? 4 : s.mh * .55);
+  const kind = pr.fam === 'animal' ? ANIM_FOR[pr.need] || 'mouse' : { water: 'splash', elec: 'zap', glue: 'strings', food: 'fire', noise: 'rings', gag: 'puff' }[pr.fam];
+  G.anims.push({ kind, sx, sy, x: sx, y: sy, gx: B.x, gy: B.y, dir: B.dir || 1, f: s.f, t: 0, life: { splash: 1.8, zap: 2.4, strings: 3, mouse: 2.2, bees: 3.2, crab: 2.4, gulls: 2.6, fire: 2.4, rings: 2, puff: 1.6 }[kind], col: FAM[pr.fam].col, seed: Math.random() * 100 });
+}
+function drawAnims(c) {
+  const B = G.br;
+  for (const a of G.anims) {
+    const k = a.t / a.life, fade = Math.min(1, (1 - k) * 3);
+    c.save(); c.globalAlpha = fade;
+    if (a.kind === 'splash') {
+      if (k < .65) for (let i = 0; i < 16; i++) {   // a jet of water from the prop to his head
+        const u = (k * 2.4 + i / 16) % 1, x = a.sx + (a.gx - a.sx) * u, y = a.sy + (a.gy - 85 - a.sy) * u - Math.sin(Math.PI * u) * 70;
+        drop(c, x, y, .55, '#6fc3ff');
+      }
+      for (let j = 0; j < 3; j++) { const r = 8 + ((k * 1.6 + j / 3) % 1) * 70; c.globalAlpha = fade * (1 - r / 80); ell(c, a.gx, a.gy - 1, r, r * .18); c.strokeStyle = '#bfe8ff'; c.lineWidth = 2.5; c.stroke(); }
+    } else if (a.kind === 'zap') {
+      if (k < .55 && Math.floor(perf * 22) % 3) for (let b = 0; b < 2; b++) {   // forked lightning, redrawn every frame
+        c.beginPath(); c.moveTo(a.sx, a.sy);
+        for (let i = 1; i < 8; i++) { const u = i / 8; c.lineTo(a.sx + (a.gx - a.sx) * u + (Math.random() - .5) * 26, a.sy + (a.gy - 70 - a.sy) * u + (Math.random() - .5) * 26); }
+        c.lineTo(a.gx, a.gy - 70); c.strokeStyle = 'rgba(190,232,255,.95)'; c.lineWidth = 3.5; c.shadowColor = '#bfe8ff'; c.shadowBlur = 12; c.stroke(); c.shadowBlur = 0;
+      }
+      for (let i = 0; i < 7; i++) { const u = (k * 1.2 + i / 7) % 1; circle(c, a.sx + Math.sin(a.seed + i * 2 + u * 3) * 12, a.sy - u * 90, 5 + u * 14); c.fillStyle = `rgba(70,66,70,${.45 * (1 - u)})`; c.fill(); }
+    } else if (a.kind === 'strings') {   // glue strings stretching between his hands and the prop
+      const hx = B.x + B.dir * 18, hy = B.y - 52;
+      for (let i = 0; i < 4; i++) {
+        const sag = 18 + i * 8 + Math.sin(perf * 6 + i) * 6;
+        c.beginPath(); c.moveTo(hx, hy + i * 3); c.quadraticCurveTo((hx + a.sx) / 2, (hy + a.sy) / 2 + sag, a.sx, a.sy + i * 2);
+        c.strokeStyle = INK; c.lineWidth = 4; c.stroke(); c.strokeStyle = '#fff4e0'; c.lineWidth = 2; c.stroke();
+      }
+    } else if (a.kind === 'mouse' || a.kind === 'crab') {   // the animal scurries off along the floor
+      const dir = Math.sign(a.sx - a.gx) || 1, x = a.sx + dir * k * 320, y = FY[a.f] - 4 + (a.kind === 'crab' ? Math.abs(Math.sin(k * 30)) * -3 : 0), leg = Math.sin(perf * 40) * 3;
+      c.save(); c.translate(x, y); c.scale(dir, 1);
+      if (a.kind === 'mouse') { ell(c, 0, -5, 11, 6); fs(c, '#8d959c', INK, 2); circle(c, 10, -8, 5); fs(c, '#8d959c', INK, 2); circle(c, 8, -13, 3); fs(c, '#f2b9a0', INK, 1.5); c.strokeStyle = INK; c.lineWidth = 1.5; c.beginPath(); c.moveTo(-10, -5); c.quadraticCurveTo(-20, -12 + leg, -24, -4); c.stroke(); line(c, -4, 0, -4 + leg, 2); line(c, 4, 0, 4 - leg, 2); }
+      else { ell(c, 0, -6, 12, 7); fs(c, '#d9442e', INK, 2); for (const s of [-1, 1]) { circle(c, s * 13, -14, 4); fs(c, '#d9442e', INK, 1.5); c.strokeStyle = INK; c.lineWidth = 1.5; for (let i = 0; i < 3; i++) line(c, s * (5 + i * 3), -2, s * (9 + i * 3), 3 + (i % 2 ? leg : -leg)); } }
+      c.restore();
+    } else if (a.kind === 'bees') {   // a little swarm circling his head
+      for (let i = 0; i < 12; i++) {
+        const ang = perf * (3 + i % 3) + i * .52 + a.seed, r = 26 + (i % 4) * 9, x = B.x + Math.cos(ang) * r, y = B.y - 88 + Math.sin(ang * 1.3) * r * .6;
+        ell(c, x, y, 4, 3); fs(c, '#f5c400', INK, 1.2); c.fillStyle = 'rgba(255,255,255,.75)'; ell(c, x - 1, y - 4, 2.5, 2 + Math.abs(Math.sin(perf * 50 + i)) * 1.5); c.fill();
+      }
+    } else if (a.kind === 'gulls') {   // seagulls flap up and away
+      for (let i = 0; i < 2; i++) {
+        const x = a.sx + (i ? 40 : -30) * k + i * 20, y = a.sy - k * 150 - i * 20, w = Math.sin(perf * 18 + i) * 8;
+        c.beginPath(); c.moveTo(x - 16, y - w); c.quadraticCurveTo(x - 7, y - 8, x, y); c.quadraticCurveTo(x + 7, y - 8, x + 16, y - w); c.strokeStyle = INK; c.lineWidth = 5; c.stroke(); c.strokeStyle = '#fff'; c.lineWidth = 2.5; c.stroke();
+        circle(c, x + 2, y + 2, 3.5); fs(c, '#fff', INK, 1.5);
+      }
+    } else if (a.kind === 'fire') {   // chilli flames and steam out of his mouth
+      const mx = B.x + B.dir * 16, my = B.y - 80;
+      for (let i = 0; i < 9; i++) {
+        const u = (k * 2.2 + i / 9) % 1, x = mx + B.dir * u * 70, y = my - u * 30 + Math.sin(i + perf * 9) * 4;
+        circle(c, x, y, 4 + u * 10); c.fillStyle = u < .4 ? `rgba(255,${180 - u * 200},40,${1 - u})` : `rgba(120,110,110,${.55 * (1 - u)})`; c.fill();
+      }
+    } else if (a.kind === 'rings' || a.kind === 'puff') {   // sound waves, or a whoopee cloud
+      for (let j = 0; j < 3; j++) {
+        const u = (k * 1.8 + j / 3) % 1;
+        if (a.kind === 'rings') { c.globalAlpha = fade * (1 - u); c.strokeStyle = a.col; c.lineWidth = 4; for (const s of [-1, 1]) { c.beginPath(); c.arc(a.x, a.y, 10 + u * 60, s > 0 ? -.7 : Math.PI - .7, s > 0 ? .7 : Math.PI + .7); c.stroke(); } }
+        else { circle(c, a.gx + (j - 1) * 18, a.gy - 30 - u * 30, 10 + u * 16); c.fillStyle = `rgba(160,130,90,${.5 * (1 - u)})`; c.fill(); }
+      }
+    } else if (a.kind === 'bucket') {   // the trap's bucket of water landing on you
+      for (let i = 0; i < 12; i++) { const u = (k * 1.6 + i / 12) % 1; drop(c, a.x - 20 + (i * 37) % 40, a.y - 140 + u * 140, .5, '#6fc3ff'); }
+    }
+    c.restore();
+  }
+}
+function drawTraps(c) {
+  for (const tr of G.traps) {
+    if (tr.off) continue;
+    const F = FY[tr.f];
+    if (tr.kind === 'squeak') { c.save(); c.translate(tr.x, F - 2); c.rotate(-.06); rr(c, -22, -4, 44, 6, 1); fs(c, '#8a5a36', INK, 2); c.restore(); c.strokeStyle = INK; c.lineWidth = 1.5; for (const dx of [-14, 14]) { circle(c, tr.x + dx, F - 4, 1.5); c.stroke(); } }
+    else { const y = CEIL[tr.f] + 22; c.strokeStyle = INK; c.lineWidth = 2; c.beginPath(); c.arc(tr.x, y - 6, 10, Math.PI, 0); c.stroke(); poly(c, [[tr.x - 12, y - 4], [tr.x + 12, y - 4], [tr.x + 9, y + 16], [tr.x - 9, y + 16]]); fs(c, '#9aa3ad', INK, 2); ell(c, tr.x, y - 4, 12, 3); fs(c, '#4aa3df', INK, 1.5); rr(c, tr.x - 26, y + 16, 52, 4, 1); fs(c, '#6b4428', INK, 1.5); }
+  }
+}
+/* ---------- small living details ----------
+   Birds on the telephone wires that fly off now and then, a cat strolling along the hedges, moths round the street
+   lamps at night, dust drifting in the sunbeam, and the telly's glow while he watches. */
+function drawAmbience(c) {
+  if (MAP.outside === 'street') {
+    const wire = (a, b, t) => [a + (b - a) * t, 318 + 68 * t * (1 - t)];
+    [[-430, 140, .22], [-430, 140, .5], [-430, 140, .81], [1200, 1520, .3], [1200, 1520, .68]].forEach(([a, b, t], i) => {
+      let [x, y] = wire(a, b, t);
+      const per = 31 + i * 7, ph = (perf + i * 13) % per, away = ph < 6 ? Math.sin(ph / 6 * Math.PI) : 0;   // flies off and back
+      x += away * (60 + i * 15) * (i % 2 ? 1 : -1); y -= away * 120;
+      const w = away ? Math.sin(perf * 20 + i) * 6 : 0;
+      ell(c, x, y - 4, 6, 4); fs(c, '#2a2a32', null); circle(c, x + 5, y - 8, 3); fs(c, '#2a2a32', null);
+      c.strokeStyle = '#2a2a32'; c.lineWidth = 2; if (away) { line(c, x - 6, y - 6 - w, x, y - 5); line(c, x + 6, y - 6 - w, x, y - 5); } else line(c, x - 4, y - 2, x - 10, y + 1);
+    });
+    const cp = (perf % 70) / 70;   // a cat walking along the left-hand hedges
+    if (cp < .6) {
+      const x = -700 + cp / .6 * 620, y = 576, st = Math.sin(perf * 8) * 2;
+      c.fillStyle = '#2d2622'; ell(c, x, y, 13, 6); c.fill(); circle(c, x + 13, y - 5, 5.5); c.fill();
+      poly(c, [[x + 10, y - 9], [x + 12, y - 15], [x + 15, y - 9]]); c.fill(); poly(c, [[x + 15, y - 9], [x + 17, y - 15], [x + 19, y - 8]]); c.fill();
+      c.strokeStyle = '#2d2622'; c.lineWidth = 3; c.lineCap = 'round'; c.beginPath(); c.moveTo(x - 12, y - 2); c.quadraticCurveTo(x - 22, y - 16, x - 18, y - 22 + st); c.stroke();
+      line(c, x - 7, y + 4, x - 7 + st, y + 11); line(c, x + 7, y + 4, x + 7 - st, y + 11); c.lineCap = 'butt';
+    }
+    if (THEME.lamps) for (const lx of [-300, 1400]) for (let i = 0; i < 4; i++) {   // moths at the street lamps
+      const a = perf * (2.5 + i * .7) + i * 1.7; circle(c, lx + Math.cos(a) * (14 + i * 4), 458 + Math.sin(a * 1.4) * (9 + i * 3), 1.8); c.fillStyle = 'rgba(255,245,210,.85)'; c.fill();
+    }
+  }
+  if (THEME.shafts && MAP.shaft && !((G.dark[MAP.shaftRoom] || 0) > 0)) {   // dust in the sunbeam
+    c.save(); poly(c, MAP.shaft); c.clip();
+    const xs = MAP.shaft.map(p => p[0]), ys = MAP.shaft.map(p => p[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    for (let i = 0; i < 18; i++) { const u = (perf * .03 + i * .137) % 1, x = x0 + ((i * 97) % 100) / 100 * (x1 - x0) + Math.sin(perf * .7 + i) * 8, y = y1 - u * (y1 - y0); circle(c, x, y, 1.4); c.fillStyle = `rgba(255,248,220,${.6 * Math.sin(u * Math.PI)})`; c.fill(); }
+    c.restore();
+  }
+  const B = G.br;
+  if (MAP === MAPS.house && B.state === 'act' && B.cur && B.cur.spot === 'tv' && !G.blown.tv) {   // the telly's flicker
+    const fl = .22 + .14 * Math.sin(perf * 23) * Math.sin(perf * 7.3);
+    c.save(); c.globalCompositeOperation = 'lighter';
+    c.fillStyle = `rgba(150,200,255,${fl})`; rr(c, 734, FY[0] - 118, 52, 42, 6); c.fill();
+    const g = c.createRadialGradient(760, FY[0] - 96, 10, 760, FY[0] - 96, 150); g.addColorStop(0, `rgba(140,190,255,${fl * .6})`); g.addColorStop(1, 'rgba(140,190,255,0)'); c.fillStyle = g; c.fillRect(610, FY[0] - 246, 300, 246);
+    c.restore();
+  }
+}
 function startCatch() {
   const B = G.br, P = G.player;
   B.resume = { state: B.state, t: B.t };
@@ -2403,7 +2586,7 @@ function update(dt) {
   // the prankster
   P.cheer = Math.max(0, P.cheer - dt);
   if (!P.caught) {
-    if (P.work) { P.work.t += dt; if (P.work.t >= P.work.total) finishWork(); }
+    if (P.work) { P.work.t += dt; if (P.work.t >= P.work.total) { if (P.work.kind === 'stun') P.work = null; else finishWork(); } }
     else if (P.path.length) {
       stepPath(P, 128, dt); P.phase += dt * 11;
       if (!P.path.length && P.target) { const t = P.target; P.target = null; interact(t); }
@@ -2411,6 +2594,22 @@ function update(dt) {
     if (floorOf(P.y) === -1 && P.x < 300) { if (!P.pipeNoise) { P.pipeNoise = true; emitNoise(214, 1); } } else P.pipeNoise = false;
   }
   P.invuln = Math.max(0, P.invuln - dt);
+  for (const pr of G.pranks) {
+    if (!pr.timer || !pr.armed || pr.done || pr.lured || G.t < pr.fireAt) continue;
+    if (B.state !== 'walk' && B.state !== 'act' && B.state !== 'idle') continue;   // he's busy reacting: it rings again in a moment
+    pr.lured = true;
+    if (B.cur && (B.state === 'walk' || B.state === 'act')) B.queue.unshift(B.state === 'act' ? { ...B.cur, dur: Math.max(1.5, B.t), noSearch: true } : { ...B.cur });
+    walkTo({ spot: pr.spot, dur: 3, rush: true, label: pr.lure });
+    say(pr.lure, 1.6); sfx('noise');
+    const s = SPOTS[pr.spot]; G.anims.push({ kind: 'rings', x: s.x, y: FY[s.f] - s.mh * .6, t: 0, life: 2.4, col: FAM.noise.col });
+    G.fx.push({ x: s.x, y: FY[s.f] - s.mh - 30, text: pr.fx, t: 0, life: 1.3 });
+  }
+  for (const tr of G.traps) {
+    tr.cool = Math.max(0, tr.cool - dt);
+    if (tr.off || tr.cool > 0 || P.caught || P.hidden || floorOf(P.y) !== tr.f || Math.abs(P.x - tr.x) > 9) continue;
+    if (tr.kind === 'squeak') { tr.cool = 3; sfx('squeak'); G.fx.push({ x: tr.x, y: FY[tr.f] - 40, text: 'CREAK!', t: 0, life: 1, small: true }); emitNoise(tr.x, tr.f); }
+    else { tr.off = true; sfx('water'); G.fx.push({ x: tr.x, y: FY[tr.f] - 120, text: 'SPLOSH!', t: 0, life: 1.2 }); P.path = []; P.target = null; P.work = { kind: 'stun', t: 0, total: 1.4 }; G.anims.push({ kind: 'bucket', x: tr.x, y: FY[tr.f], t: 0, life: 1.4 }); emitNoise(tr.x, tr.f); toast('A bucket over the door! You stand there dripping.'); }
+  }
   // the neighbour
   B.soot = Math.max(0, B.soot - dt); B.wet = Math.max(0, B.wet - dt);
   if (B.prop) { B.prop.t -= dt; if (B.prop.t <= 0) B.prop = null; }
@@ -2425,12 +2624,12 @@ function update(dt) {
       if (walkFire.length) { B.reacts = walkFire.slice(); B.thens = []; B.fromWalk = true; fireOne(B.reacts.shift()); break; }
       if (!B.path.length) {
         if (B.cur.search) {
-          if (P.hidden === B.cur.hideId) { startCatch(); break; }
+          if (P.hidden === B.cur.hideId) { G.foundHide = P.hidden; startCatch(); break; }
           say('Hmph. Nothing.', 1.2); B.state = 'act'; B.t = 1; B.el = 0; break;
         }
-        if (B.anger >= 3 && P.hidden && !B.cur.investigate && !B.cur.noSearch) {
+        if ((B.anger >= 3 || P.hidden === G.foundHide) && P.hidden && !B.cur.investigate && !B.cur.noSearch) {
           const h = HIDES[P.hidden];
-          if (roomAt(h.x, FY[h.f]) === roomAt(B.x, B.y) && Math.random() < .5) {
+          if (roomAt(h.x, FY[h.f]) === roomAt(B.x, B.y) && Math.random() < (P.hidden === G.foundHide ? .65 : .5)) {
             B.queue.unshift({ ...B.cur, noSearch: true });
             walkTo({ x: h.x, f: h.f, dur: 1, search: true, hideId: P.hidden, label: "Who's in there?" });
             say("I know you're here...", 1.5);
@@ -2458,6 +2657,7 @@ function update(dt) {
         else {
           if (B.fromWalk) { B.queue.unshift(B.cur); B.fromWalk = false; }
           for (const s of B.thens.reverse()) B.queue.unshift({ spot: s, dur: 4, rush: true });
+          if (B.flee) { const f = floorOf(B.y) < 0 ? 0 : floorOf(B.y); B.queue.unshift({ x: 1070, f, dur: 2.5, rush: true, investigate: true, label: B.flee }); say(B.flee, 1.6); B.flee = null; }
           B.thens = []; nextAct();
         }
       }
@@ -2482,6 +2682,8 @@ function update(dt) {
     music.tension += (want - music.tension) * Math.min(1, dt * 1.5);
   }
   for (const p of G.parts) { p.t += dt; p.vy += 420 * dt; p.x += p.vx * dt; p.y += p.vy * dt; }
+  for (const a of G.anims) a.t += dt;
+  G.anims = G.anims.filter(a => a.t < a.life);
   G.parts = G.parts.filter(p => p.t < p.life);
   for (const s of G.snaps) if (!s.taken && G.t >= s.at) { s.taken = true; snapPrank(s); }
   if (G.pranks.every(p => p.done || p.bonus) && B.state !== 'react' && G.doneAt === null) G.doneAt = G.t;
@@ -2536,7 +2738,7 @@ function drawMarkers(c) {
   }
 }
 // Comic close-up: a framed panel slides in with his face, the sound word and what he shouted.
-const PANEL_BG = { glue: '#f6c48a', water: '#9fd0f2', elec: '#fbe27a', gag: '#e2c4f2' };
+const PANEL_BG = { glue: '#f6c48a', water: '#9fd0f2', elec: '#fbe27a', gag: '#e2c4f2', animal: '#dcc59a', food: '#f7b4a4', noise: '#a8e3da' };
 function drawPanel() {
   const pn = G.panel; if (!pn) return;
   const w = clamp(VW * .34, 170, 300), h = w * .7;
@@ -2553,7 +2755,7 @@ function drawPanel() {
   c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 3;
   for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2 + pn.t * .3; c.beginPath(); c.moveTo(w * .4 + Math.cos(a) * w * .3, h * .55 + Math.sin(a) * w * .3); c.lineTo(w * .4 + Math.cos(a) * w, h * .55 + Math.sin(a) * w); c.stroke(); }
   const s = h / 64, B = G.br;
-  const face = ART['neighbour-face-' + (pn.combo || pn.rage ? 'rage' : { glue: 'glue', water: 'wet', elec: 'shock', gag: 'rage' }[pr.fam])];
+  const face = ART['neighbour-face-' + (pn.combo || pn.rage ? 'rage' : { glue: 'glue', water: 'wet', elec: 'shock', gag: 'rage', animal: 'shock', food: 'rage', noise: 'shock' }[pr.fam])];
   if (face) {   // painted close-up, sized to fill the panel's height
     const fs_ = h * 1.08 / (face.y1 - face.y0), cx = (face.x0 + face.x1) / 2;
     c.drawImage(face.img, w * .42 - cx * fs_, h - face.y1 * fs_ + 4, face.img.width * fs_, face.img.height * fs_);
@@ -2606,6 +2808,8 @@ function render() {
   if (!G) { ctx.restore(); return; }
   const P = G.player, B = G.br;
   drawDynamic(ctx);
+  drawAmbience(ctx);
+  drawTraps(ctx);
   // danger: red chalk scribble around the room he's heading through
   if (mode === 'play' && !P.hidden && !P.caught) {
     const proom = roomAt(P.x, P.y);
@@ -2633,7 +2837,8 @@ function render() {
     ctx.fill('evenodd'); ctx.restore();
   }
   if (P.hidden) { const h = HIDES[P.hidden]; drawPeek(ctx, h.x, FY[h.f] - 92); } else if (!drawPranksterArt(ctx, P)) drawPrankster(ctx, P);
-  if (P.work) {
+  drawAnims(ctx);
+  if (P.work && P.work.kind !== 'stun') {
     const k = P.work.t / P.work.total;
     rr(ctx, P.x - 24, P.y - 112, 48, 10, 5); fs(ctx, '#3b2414', INK, 2);
     rr(ctx, P.x - 22, P.y - 110, 44 * k, 6, 3); fs(ctx, P.work.obj.pr ? FAM[P.work.obj.pr.fam].col : '#f5c400', null);
@@ -2658,6 +2863,7 @@ function render() {
     let label;
     if (hover.kind === 'item') label = `Grab: ${hover.name}`;
     else if (hover.kind === 'hide') label = P.hidden === hover.id ? 'Hiding here' : `Hide: ${hover.name}`;
+    else if (hover.kind === 'trap') label = `Disarm: ${hover.name}`;
     else { const pr = hover.pr; label = `${FAM[pr.fam].name}: ${pr.name}` + (pr.armed ? ' (set)' : pr.need ? ` (needs ${ITEMS[pr.need].toLowerCase()})` : ''); }
     ctx.font = '15px "Permanent Marker", "Comic Sans MS", sans-serif';
     const w = ctx.measureText(label).width + 20, x = clamp(hover.x - w / 2, 6, W - w - 6), y = clamp(FY[hover.f] - hover.h - 64, 100, H - 40);
@@ -2690,6 +2896,7 @@ function snapPrank(s) {
   c.drawImage(bg, 0, 0, W, H);
   drawDynamic(c);
   if (!drawGeraldArt(c, B)) drawTarget(c, B);
+  drawAnims(c);
   drawLighting(c);
   c.setTransform(1, 0, 0, 1, 0, 0);
   c.save(); c.translate(12, 10); c.rotate(-.06);
@@ -2872,7 +3079,7 @@ function openBrief(i) {
   $('briefEyebrow').textContent = `Day ${i + 1} · ${MAP.name} · ${L.pranks.length} deeds · ${fmt(L.time)} on the clock`;
   $('briefTitle').textContent = L.name;
   $('briefText').textContent = `${L.text} Do every deed to finish: 3 stars with ${fmt(30)} or more left, 2 before the clock runs out, 1 after.`;
-  $('briefTip').textContent = 'Tip: ' + L.tip;
+  $('briefTip').textContent = 'Tip: ' + L.tip + (L.traps ? ' He has set traps today: tap one to disarm it before you walk into it.' : '');
   show('brief'); $('briefGo').focus();
 }
 let rotateDismissed = false;
