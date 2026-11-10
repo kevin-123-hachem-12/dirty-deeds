@@ -170,11 +170,14 @@ html.in-menu .hud,html.in-menu .below,html.in-menu .ffwd{visibility:hidden}
 @keyframes fume{to{transform:translateY(-3px) rotate(-1deg)}}
 .shout{position:absolute;z-index:2;right:max(4vw,env(safe-area-inset-right,0px));bottom:min(66vh,410px);background:#fff;color:var(--red);font-family:var(--shout);font-size:clamp(16px,3.4vh,26px);letter-spacing:1px;padding:4px 12px;border:3px solid var(--ink);border-radius:14px;transform:rotate(4deg);box-shadow:3px 3px 0 var(--ink)}
 .shout::after{content:"";position:absolute;bottom:-12px;right:34%;border:9px solid transparent;border-top-color:var(--ink)}
+/* upright phone: the menu sits at the top and the characters keep the strip below it, so the bubble and the stars never meet */
 @media (orientation:portrait){
-  .menu-char{height:min(30vh,300px)}
-  .shout{bottom:min(28vh,282px)}
-  .title-col{margin-bottom:22vh}
+  .overlay.title{place-items:start center}
+  .menu-char{height:min(26vh,300px)}
+  .shout{bottom:min(24vh,280px);font-size:clamp(15px,2.6vh,22px)}
+  .title-col{margin-bottom:calc(min(26vh,300px) + 54px)}
 }
+@media (orientation:portrait) and (max-height:600px){.menu-char,.shout{display:none}.title-col{margin-bottom:0}}
 @media (max-width:620px) and (orientation:landscape){.menu-char{height:min(52vh,300px)}.shout{display:none}}
 @media (prefers-reduced-motion:reduce){.menu-char{animation:none}}
 /* photo album + rewards: corkboards like Pick a Day */
