@@ -554,7 +554,40 @@ html.app .below .page.open .checklist{grid-template-columns:minmax(0,1fr)}
 </div>
 
 <script>
+// Phones and tablets always play in landscape. The page loads the game again inside a frame that is always wider than
+// tall, turned on its side while the phone is held upright, so it works even with the phone's rotation lock on.
+// Computers run the game directly. If the frame can't load (some hosts block it), the game runs here after all.
 (() => {
+  if (location.hash === '#dd-inner' || !matchMedia('(pointer: coarse)').matches) return;
+  window.__ddWrap = true;
+  document.documentElement.classList.add('dd-host');
+  const st = document.createElement('style');
+  st.textContent = 'html.dd-host,html.dd-host body{margin:0;height:100%;overflow:hidden;background:#140c18}html.dd-host body>*:not(#ddFrame){display:none!important}'
+    + '#ddFrame{position:fixed;left:0;top:0;border:0;display:block;transform-origin:0 0;background:#140c18}';
+  document.head.appendChild(st);
+  const go = () => {
+    const f = document.createElement('iframe'); f.id = 'ddFrame'; f.title = 'Dirty Deeds';
+    f.allow = 'fullscreen; autoplay'; f.setAttribute('allowfullscreen', '');
+    f.src = location.href.split('#')[0] + '#dd-inner';
+    document.body.appendChild(f);
+    const fit = () => {
+      const W = innerWidth, H = innerHeight, up = H > W;
+      f.style.width = (up ? H : W) + 'px'; f.style.height = (up ? W : H) + 'px';
+      f.style.transform = up ? `translateX(${W}px) rotate(90deg)` : 'none';
+    };
+    fit(); addEventListener('resize', fit); addEventListener('orientationchange', () => setTimeout(fit, 200));
+    let ready = false; addEventListener('message', e => { if (e.data === 'dd-ready') ready = true; });
+    setTimeout(() => {
+      if (ready) return;
+      f.remove(); st.remove(); document.documentElement.classList.remove('dd-host');
+      window.__ddWrap = false; if (window.__ddStart) window.__ddStart();
+    }, 8000);
+  };
+  if (document.body) go(); else addEventListener('DOMContentLoaded', go);
+})();
+</script>
+<script>
+window.__ddStart = () => {
 'use strict';
 const W = 1200, H = 640;
 const FY = [590, 330];                 // feet height: ground, top floor
@@ -3592,9 +3625,11 @@ function play() {
   if (isTouch) goFullscreen();
 }
 function goFullscreen() {
-  const el = document.documentElement;
-  if (!document.fullscreenEnabled || document.fullscreenElement || !el.requestFullscreen) return;
-  el.requestFullscreen().then(() => { try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} }).catch(() => {});
+  // inside the landscape frame, the whole page goes full screen, not just the frame
+  let doc = document; try { if (location.hash === '#dd-inner' && parent.document) doc = parent.document; } catch (e) {}
+  const el = doc.documentElement;
+  if (!doc.fullscreenEnabled || doc.fullscreenElement || !el.requestFullscreen) return;
+  el.requestFullscreen().then(() => { try { doc.defaultView.screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} }).catch(() => {});
 }
 function toggleList(open) {
   const pg = $('listPage'), on = open ?? !pg.classList.contains('open');
@@ -3832,5 +3867,7 @@ $('dayName').textContent = 'Pick a day';
 startLoading();
 loadArt();
 requestAnimationFrame(loop);
-})();
+if (location.hash === '#dd-inner') try { parent.postMessage('dd-ready', '*'); } catch (e) {}
+};
+if (!window.__ddWrap) window.__ddStart();
 </script>

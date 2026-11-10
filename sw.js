@@ -1,7 +1,7 @@
 // Dirty Deeds offline helper. The page and the picture list come from the network when there is one (so updates
 // show straight away) and from the phone's copy when there isn't. Pictures come from the phone's copy first and are
 // refreshed in the background. Installing it downloads every picture once, so the whole game plays offline.
-const CACHE = 'dirty-deeds-20261110154028';
+const CACHE = 'dirty-deeds-20261110155507';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'img/manifest.json'];
 
 self.addEventListener('install', e => {
