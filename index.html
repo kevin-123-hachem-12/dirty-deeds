@@ -190,6 +190,17 @@ html.in-menu .hud,html.in-menu .below,html.in-menu .ffwd{visibility:hidden}
 /* photo album + rewards: corkboards like Pick a Day */
 .cork h2 small{font-family:var(--sign);font-size:18px;color:#4a2c1a;margin-left:8px}
 .cork-note{margin:-6px 0 0;color:#3b2414;font-size:16px}
+/* comic strips between chapters: panels appear one at a time; an upright phone shows one panel at a time */
+.story{width:min(1100px,100%);display:flex;flex-direction:column;gap:16px;align-items:center}
+.story-title{font-family:var(--shout);font-weight:400;font-size:clamp(28px,4.4vw,46px);color:#f5c400;-webkit-text-stroke:2px var(--ink);paint-order:stroke fill;text-shadow:3px 3px 0 var(--ink);margin:0;text-align:center;letter-spacing:1px}
+.panels{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;width:100%;cursor:pointer}
+.panel{margin:0;background:#fffdf6;color:var(--ink);border:3px solid var(--ink);padding:7px;box-shadow:5px 6px 0 rgba(0,0,0,.5);transform:rotate(var(--r,0deg));opacity:0;translate:0 16px;transition:opacity .4s,translate .4s}
+.panel.on{opacity:1;translate:0 0}
+.panel img{display:block;width:100%;aspect-ratio:530/570;object-fit:cover;border:2px solid var(--ink);background:#3b2a20}
+.panel figcaption{font-family:var(--sign);font-size:clamp(15px,1.7vw,19px);line-height:1.25;padding:8px 3px 1px}
+.story-note{margin:0;font-family:var(--sign);font-size:18px;color:#fff7e6;text-align:center;text-shadow:2px 2px 0 var(--ink)}
+@media (orientation:portrait){.panels{grid-template-columns:1fr;width:min(430px,100%)}.panel{display:none}.panel.cur{display:block}.panel img{max-height:52vh;object-fit:contain}}
+@media (prefers-reduced-motion:reduce){.panel{transition:none}}
 .album-group h3{font-family:var(--sign);font-weight:400;font-size:19px;color:var(--ink);margin:6px 0 10px}
 .album-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px;margin-bottom:14px}
 .snap{position:relative;background:#fffdf6;color:var(--ink);border:2px solid var(--ink);padding:6px 6px 8px;box-shadow:3px 4px 0 rgba(0,0,0,.4);transform:rotate(var(--r,0deg));display:flex;flex-direction:column;gap:4px;text-align:left}
@@ -443,6 +454,7 @@ html.app .below .page.open .checklist{grid-template-columns:minmax(0,1fr)}
       <li>Do every deed to finish the day. Finish with 30 seconds or more on the clock for 3 stars, before it hits zero for 2, or in overtime for 1.</li>
       <li>New pranks: animals send him running out of the room, food sends him hunting for water, and noise pranks go off a few seconds after you set them and lure him over.</li>
       <li>He gets smarter: he checks spots where he was pranked, notices missing things, searches the hiding spot he last found you in, and on harder days sets traps. Tap a trap to disarm it.</li>
+      <li>From the garage on, Gerald's bulldog Biscuit sometimes patrols downstairs. If he sees you he barks and Gerald comes running. Feed him the sausage from your yard to keep him busy for 15 seconds, but while you carry it he follows you and whines.</li>
       <li>Every prank snaps a photo for your Photo Album. Stars unlock Rewards: gadgets that add a bonus prank to every day, and hats for the Prankster.</li>
       <li>Waiting for him? Press and hold the fast-forward button in the corner (or hold F) to run time three times as fast. The gear button pauses the day, with sound, music, restart and the main menu inside. P also pauses.</li>
     </ul>
@@ -457,6 +469,15 @@ html.app .below .page.open .checklist{grid-template-columns:minmax(0,1fr)}
     <p id="briefText"></p>
     <div class="tip" id="briefTip"></div>
     <div class="row"><button class="cta" id="briefGo" type="button">Sneak in</button><button class="small-sign" id="briefBack" type="button">Back</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="story" hidden>
+  <div class="story">
+    <h2 class="story-title" id="storyTitle"></h2>
+    <div class="panels" id="storyPanels"></div>
+    <p class="story-note" id="storyNote" hidden></p>
+    <div class="row"><button class="cta" id="storyNext" type="button">Next</button><button class="small-sign" id="storySkip" type="button">Skip</button></div>
   </div>
 </div>
 
@@ -585,7 +606,7 @@ const ITEMS = {
   salt: 'Salt', wrench: 'Wrench', soap: 'Washing-up liquid', bucket: 'Bucket of water', pondwater: 'Jar of pond water',
   paperclip: 'Paperclip', fork: 'Fork', pliers: 'Pliers', cable: 'Extension lead', screwdriver: 'Screwdriver',
   mouse: 'Mouse in a box', beejar: 'Jar of bees', crab: 'Crab in a bucket', chips: 'Bag of chips', chilli: 'Extra-hot chilli', prunes: 'Prune juice',
-  alarmclock: 'Alarm clock', airhorn: 'Air horn',
+  alarmclock: 'Alarm clock', airhorn: 'Air horn', sausage: 'Sausage',
 };
 const PRANKS = {
   remoteGlue:  { spot: 'remote',  fam: 'glue',  need: 'superglue',   name: 'Glue the remote to the table', pts: 110, say: 'Let GO of me!',          fx: 'YANK!',      prop: 'remote' },
@@ -818,6 +839,10 @@ const LEVELS = [
 
 /* ---------- helpers ---------- */
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+// Biscuit the bulldog patrols the ground floor on some days from Chapter 2 on; a pack of sausages waits in your yard
+for (const [i, x0, x1] of [[7, 260, 960], [9, 260, 960], [10, 260, 960], [12, 230, 960], [14, 230, 960], [15, 230, 960]]) {
+  LEVELS[i].dog = { x0, x1 }; LEVELS[i].time += 15; LEVELS[i].items.push({ id: 'sausage', x: 106, f: 0, h: 0 });
+}
 function floorOf(y) { if (Math.abs(y - FY[0]) < .5) return 0; if (Math.abs(y - FY[1]) < .5) return 1; return -1; }
 function roomAt(x, y) {
   const f = floorOf(y);
@@ -1008,6 +1033,8 @@ function sfx(n) {
     case 'caught': tone(170, .45, 'square', .06, 60); break;
     case 'nope': tone(220, .14, 'triangle', .06, 160); break;
     case 'hide': tone(330, .1, 'sine', .07, 250); break;
+    case 'bark': for (let i = 0; i < 2; i++) setTimeout(() => { tone(240, .13, 'sawtooth', .09, 130); noise(.1, .07, 'bandpass', 900); }, i * 230); break;
+    case 'whine': tone(880, .5, 'sine', .035, 620); break;
     case 'huh': seq([300, 420], .1, 'sine'); break;
     case 'win': seq([523, 659, 784, 1046], .14, 'triangle'); break;
     case 'lose': seq([392, 330, 262, 196], .18, 'triangle'); break;
@@ -1067,6 +1094,7 @@ function drawItem(c, id, x, y, s = 1) {
     case 'chilli': c.beginPath(); c.moveTo(-10, -8); c.quadraticCurveTo(10, -8, 8, 12); c.quadraticCurveTo(-2, 0, -10, -2); c.closePath(); fs(c, '#d9442e', INK, k); c.strokeStyle = '#4f7a3a'; c.lineWidth = 3; line(c, -10, -6, -14, -12); break;
     case 'prunes': rr(c, -7, -6, 14, 18, 3); fs(c, '#5a2a4a', INK, k); rr(c, -4, -12, 8, 6, 1); fs(c, '#5a2a4a', INK, k); rr(c, -6, 0, 12, 6, 1); fs(c, '#efe7d4', INK, 1); break;
     case 'alarmclock': circle(c, 0, 2, 10); fs(c, '#d9442e', INK, k); circle(c, 0, 2, 7); fs(c, '#fbf4df', INK, 1.5); circle(c, -7, -8, 3.5); fs(c, '#c9a227', INK, 1.5); circle(c, 7, -8, 3.5); fs(c, '#c9a227', INK, 1.5); c.strokeStyle = INK; c.lineWidth = 1.5; line(c, 0, 2, 0, -3); line(c, 0, 2, 4, 2); break;
+    case 'sausage': c.lineCap = 'round'; c.strokeStyle = INK; c.lineWidth = 11; c.beginPath(); c.arc(0, 12, 16, Math.PI * 1.2, Math.PI * 1.8); c.stroke(); c.strokeStyle = '#c96a55'; c.lineWidth = 7; c.stroke(); c.strokeStyle = 'rgba(255,255,255,.45)'; c.lineWidth = 2; c.beginPath(); c.arc(0, 12, 17, Math.PI * 1.35, Math.PI * 1.6); c.stroke(); break;
     case 'airhorn': rr(c, -11, -3, 10, 14, 3); fs(c, '#d9442e', INK, k); poly(c, [[-1, 0], [10, -8], [10, 14], [-1, 7]]); fs(c, '#c9d0d6', INK, k); break;
     case 'whoopee': ell(c, 0, 2, 13, 9); fs(c, '#e0567a', INK, k); ell(c, -3, -1, 5, 3); c.fillStyle = 'rgba(255,255,255,.5)'; c.fill(); rr(c, 10, -1, 8, 6, 2); fs(c, '#e0567a', INK, k); break;
     case 'banana': c.lineCap = 'round'; c.strokeStyle = INK; c.lineWidth = 9; c.beginPath(); c.arc(0, -10, 16, Math.PI * .25, Math.PI * .8); c.stroke(); c.strokeStyle = '#f2d14b'; c.lineWidth = 5.5; c.stroke(); c.fillStyle = '#5b4232'; circle(c, 11, 1, 2.5); c.fill(); break;
@@ -1872,7 +1900,7 @@ const mapKey = () => Object.keys(MAPS).find(k => MAPS[k] === MAP);
 // load order: the characters and the hall (every day) first, then the location on screen, then everything else
 function artRank(name) {
   const here = mapKey(), set = ART_SETS[here] || [];
-  if (/^(prankster|neighbour)-(idle|creep|work|climb|cheer|caught|walk|reading|glue|wet|shock|rage|catch)/.test(name) || /^(room-hall|staircase|landing-railing|front-door|yard|house-shell)$/.test(name)) return 0;
+  if (/^(prankster|neighbour)-(idle|creep|work|climb|cheer|caught|walk|reading|glue|wet|shock|rage|catch|slip|flat|sniff|shriek|chilli|swat|ears|soaked)/.test(name) || /^dog-/.test(name) || /^(room-hall|staircase|landing-railing|front-door|yard|house-shell)$/.test(name)) return 0;
   if (set.includes(name) || (ART_EXTRA[here] || []).includes(name) || set.includes(name.replace(/-pranked$/, ''))) return 1;
   return 2;
 }
@@ -1911,6 +1939,7 @@ async function loadArt() {
   let names = null;
   try { const r = await fetch('img/manifest.json', { cache: 'no-store' }); if (r.ok) names = await r.json(); } catch (e) {}
   if (!Array.isArray(names)) names = [...ART_FILES, ...ART_OPAQUE];
+  names = names.filter(n => !n.startsWith('strip-'));   // the comic strips are shown as plain pictures, never cut out
   names.forEach(n => artWanted.add(n));
   artQueue = [...names]; prioritiseArt(); pumpArt();
 }
@@ -2102,8 +2131,13 @@ function drawGeraldArt(c, B) {
   const reading = B.state === 'act' && B.cur && B.cur.spot && SPOTS[B.cur.spot].blind;
   let pose = 'idle';
   if (B.state === 'catch') pose = ART['neighbour-catch'] ? 'catch' : 'rage';
-  else if (B.state === 'react') pose = B.reactRage ? 'rage' : { glue: 'glue', water: 'wet', elec: 'shock' }[B.reactFam] || 'rage';
-  else if (B.state === 'walk') pose = 'walk';
+  else if (B.state === 'react') {
+    // a prank's own pose when it has one (slipping turns into lying flat partway through); otherwise his family pose
+    let rp = B.reactPose;
+    if (rp === 'slip' && B.t < B.reactLen * .62) rp = 'flat';
+    pose = rp && ART['neighbour-' + rp] ? rp : B.reactRage ? 'rage' : { glue: 'glue', water: 'wet', elec: 'shock' }[B.reactFam] || 'rage';
+  }
+  else if (B.state === 'walk') pose = B.wet > 0 && ART['neighbour-soaked'] ? 'soaked' : 'walk';
   else if (reading) pose = 'reading';
   const sp = spriteFor('neighbour-' + pose, 'neighbour-idle', 98, B.phase); if (!sp) return false;
   ell(c, B.x, B.y, 26, 4); fs(c, 'rgba(0,0,0,.25)', null);
@@ -2329,6 +2363,7 @@ function newGame(i) {
     wet: {}, dark: {}, fx: [], parts: [], fxAt: {}, blown: {}, blownAt: {}, snaps: [], anims: [],
     wary: [], missing: [], foundHide: null,
     traps: (L.traps || []).map(t => ({ ...t, off: false, cool: 0 })),
+    dog: L.dog ? { x: (L.dog.x0 + L.dog.x1) / 2, f: 0, x0: L.dog.x0, x1: L.dog.x1, dir: 1, state: 'walk', t: 0, cool: 0, phase: 0, whine: 1 } : null,
   };
   renderTray(); renderChecklist(); updateHud(true);
   $('dayName').textContent = `Day ${i + 1}: ${L.name}`;
@@ -2339,6 +2374,7 @@ function targets() {
   for (const it of G.items) if (!it.taken) out.push({ kind: 'item', it, x: it.x, f: it.f, h: it.h, name: ITEMS[it.id] });
   for (const id in HIDES) { const h = HIDES[id]; out.push({ kind: 'hide', id, x: h.x, f: h.f, h: 70, name: h.name }); }
   for (const tr of G.traps) if (!tr.off) out.push({ kind: 'trap', tr, x: tr.x, f: tr.f, h: tr.kind === 'bucket' ? 150 : 20, name: TRAP_NAME[tr.kind] });
+  if (G.dog && G.dog.state !== 'eat') out.push({ kind: 'dog', x: G.dog.x, f: G.dog.f, h: 40, name: 'Biscuit' });
   for (const pr of G.pranks) if (!pr.done) { const s = SPOTS[pr.spot]; out.push({ kind: 'prank', pr, x: s.x, f: s.f, h: s.mh, name: pr.name }); }
   return out;
 }
@@ -2359,6 +2395,12 @@ function interact(t) {
   if (t.kind === 'item') { if (!t.it.taken) P.work = { kind: 'item', t: 0, total: .5, obj: t }; }
   else if (t.kind === 'hide') { P.hidden = t.id; toast(`Hiding: ${t.name}`); sfx('hide'); }
   else if (t.kind === 'trap') { if (!t.tr.off) P.work = { kind: 'trap', t: 0, total: 1.2, obj: t }; }
+  else if (t.kind === 'dog') {
+    const D = G.dog; if (!D || D.state === 'eat') return;
+    if (floorOf(P.y) !== D.f || Math.abs(P.x - D.x) > 70) { toast('Biscuit trotted off. Tap him again.'); return; }
+    if (!G.inv.includes('sausage')) { toast("Biscuit growls. He'd take a sausage: there's a pack in your yard."); sfx('nope'); return; }
+    P.work = { kind: 'feed', t: 0, total: .6, obj: t };
+  }
   else if (t.kind === 'prank') {
     const pr = t.pr;
     if (pr.done) return;
@@ -2376,6 +2418,11 @@ function finishWork() {
     if (it.x >= 200 && Math.random() < .6) G.missing.push(it);   // taken from inside his house: he may notice it's gone
   }
   else if (w.kind === 'trap') { w.obj.tr.off = true; toast(`Disarmed: ${TRAP_NAME[w.obj.tr.kind].toLowerCase()}`); sfx('set'); }
+  else if (w.kind === 'feed') {
+    const D = G.dog; G.inv.splice(G.inv.indexOf('sausage'), 1); renderTray();
+    D.state = 'eat'; D.t = 15; D.dir = P.x > D.x ? 1 : -1; sfx('set'); toast('Biscuit is busy with the sausage for 15 seconds. Go!');
+    const pack = G.items.find(i => i.id === 'sausage'); if (pack) pack.back = G.t + 8;   // another one turns up in the yard
+  }
   else {
     const pr = w.obj.pr; if (pr.need) G.inv.splice(G.inv.indexOf(pr.need), 1); renderTray(); pr.armed = true; sfx('set'); renderChecklist();
     if (pr.timer) { pr.fireAt = G.t + pr.timer; toast(`Set: ${pr.name}. Goes off in ${pr.timer} seconds.`); } else toast(`Set: ${pr.name}`);
@@ -2410,6 +2457,65 @@ function emitNoise(x, f) {
   say('Huh? What was that?', 1.4); sfx('huh');
   G.fx.push({ x: B.x, y: B.y - 150, text: '?', t: 0, life: 1.2 });
 }
+/* ---------- Biscuit the dog ----------
+   He walks his stretch of the ground floor. If he sees you (in front of him, or right next to him) he barks and Gerald
+   rushes over. With a sausage in your pocket he follows you and whines instead, which Gerald can hear; feed it to him
+   and he lies down to eat it for 15 seconds. */
+function updateDog(dt) {
+  const D = G.dog; if (!D) return;
+  const P = G.player;
+  for (const it of G.items) if (it.back && G.t >= it.back) { it.taken = false; it.back = 0; }
+  D.cool = Math.max(0, D.cool - dt); D.t -= dt;
+  if (D.state === 'eat') { if (D.t <= 0) { D.state = 'walk'; toast('Biscuit has finished the sausage.'); } return; }
+  if (D.state === 'bark') { D.dir = P.x > D.x ? 1 : -1; if (D.t <= 0) { D.state = 'idle'; D.t = 1.5; } return; }
+  const near = floorOf(P.y) === D.f && !P.hidden && !P.caught && P.x > 200 && Math.abs(P.x - D.x) < 150;
+  if (near && G.inv.includes('sausage')) {
+    D.state = 'beg'; D.dir = P.x > D.x ? 1 : -1;
+    if (Math.abs(P.x - D.x) > 42) { D.x += D.dir * 70 * dt; D.phase += dt * 9; }
+    D.whine -= dt;
+    if (D.whine <= 0) { D.whine = 3; sfx('whine'); G.fx.push({ x: D.x, y: FY[D.f] - 62, text: 'whine...', t: 0, life: 1, small: true }); emitNoise(D.x, D.f); }
+    return;
+  }
+  if (near && D.cool <= 0 && (Math.sign(P.x - D.x) === D.dir || Math.abs(P.x - D.x) < 60)) { dogBark(); return; }
+  if (D.state === 'beg') D.state = 'walk';
+  if (D.state === 'idle') { if (D.t <= 0) D.state = 'walk'; return; }
+  D.x += D.dir * 45 * dt; D.phase += dt * 8;
+  if (D.x > D.x1) { D.x = D.x1; D.dir = -1; D.state = 'idle'; D.t = 2 + Math.random() * 2; }
+  else if (D.x < D.x0) { D.x = D.x0; D.dir = 1; D.state = 'idle'; D.t = 2 + Math.random() * 2; }
+  else if (Math.random() < dt * .08) { D.state = 'idle'; D.t = 1.5 + Math.random() * 2; }
+}
+function dogBark() {
+  const D = G.dog, B = G.br;
+  D.state = 'bark'; D.t = 1.6; D.cool = 8; sfx('bark');
+  G.fx.push({ x: D.x, y: FY[D.f] - 72, text: 'WOOF! WOOF!', t: 0, life: 1.4 });
+  if (B.state !== 'walk' && B.state !== 'act' && B.state !== 'idle') return;   // he's busy reacting to a prank
+  if (B.cur && B.state !== 'idle' && !B.cur.investigate) B.queue.unshift(B.state === 'act' ? { ...B.cur, dur: Math.max(1.5, B.t), noSearch: true } : { ...B.cur });
+  B.rush = true; walkTo({ x: clamp(D.x, 214, 1170), f: D.f, dur: 2.5, rush: true, investigate: true, label: 'What is it, Biscuit?' });
+  say("What is it, Biscuit? Who's there?!", 1.8);
+}
+function drawDog(c) {
+  const D = G.dog; if (!D) return;
+  const y = FY[D.f], moving = D.state === 'walk' || (D.state === 'beg' && Math.abs(G.player.x - D.x) > 42);
+  const pose = D.state === 'bark' ? 'bark' : D.state === 'eat' ? 'eat' : moving ? 'walk' : 'idle';
+  ell(c, D.x, y, 22, 3.5); fs(c, 'rgba(0,0,0,.25)', null);
+  const sp = spriteFor('dog-' + pose, 'dog-idle', 46, D.phase);
+  if (sp) drawSprite(c, sp, D.x + (pose === 'bark' ? Math.sin(perf * 40) * 1.5 : 0), y, D.dir, 1);
+  else {   // drawn stand-in until his pictures arrive
+    const d = D.dir, b = moving ? Math.abs(Math.sin(D.phase)) * 2 : 0;
+    ell(c, D.x - d * 4, y - 20 - b, 22, 13); fs(c, '#c8955a', INK, 2.5);
+    circle(c, D.x + d * 18, y - 30 - b, 11); fs(c, '#d9a86c', INK, 2.5);
+    rr(c, D.x + d * 8 - 4, y - 33 - b, 8, 4, 2); fs(c, '#b8432f', INK, 1.5);
+    for (const lx of [-16, -6, 6, 14]) { rr(c, D.x + lx - 3, y - 12 - b, 6, 12 + b, 2); fs(c, '#c8955a', INK, 2); }
+  }
+  if (D.state === 'eat') {   // how long the sausage lasts
+    c.beginPath(); c.arc(D.x, y - 62, 8, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.max(0, D.t) / 15);
+    c.strokeStyle = INK; c.lineWidth = 6; c.stroke(); c.strokeStyle = '#f5c400'; c.lineWidth = 3; c.stroke();
+  }
+}
+// Gerald's painted reaction for a prank, when it has one of its own
+const REACT_POSE = { tilesSoap: 'slip', oilSlick: 'slip', bathSoap: 'slip', 'gadget-banana': 'slip', 'gadget-stinkbomb': 'sniff', sherryPrunes: 'sniff',
+  trainBees: 'swat', showerGull: 'swat', 'gadget-spider': 'shriek' };
+const FAM_POSE = { animal: 'shriek', food: 'chilli', noise: 'ears' };
 function fireOne(pr) {
   const B = G.br, P = G.player, room = roomAt(B.x, B.y);
   pr.done = true; pr.armed = false;
@@ -2430,13 +2536,16 @@ function fireOne(pr) {
   if (pr.fam === 'glue' || pr.fam === 'water' || pr.fam === 'elec') { G.blown[pr.spot] = true; G.blownAt[pr.spot] = G.t; }   // only these wreck the prop's picture
   if (pr.prop) B.prop = { kind: pr.prop, t: 14 };
   if (pr.soot) B.soot = 14;
-  if (pr.soak) B.wet = 10;
+  if (pr.soak || pr.id === 'sinkTap') B.wet = 10;
   if (combo === 'Water + electricity') { G.dark[room] = 25; B.soot = 16; }
   const before = B.anger; B.anger = Math.min(3, B.anger + (combo ? 2 : 1)); B.angerT = 0;
   const rage = B.anger === 3 && before < 3;
   G.snaps.push({ pr, combo, rage, at: G.t + .75 });   // a photo for the album once his reaction shows
   B.state = 'react'; B.reactFam = pr.fam; B.reactRage = rage || !!combo;
   B.t = REACT_TIME[pr.fam] + (combo ? .8 : 0) + (rage ? 1 : 0);
+  B.reactPose = REACT_POSE[pr.id] || FAM_POSE[pr.fam] || null;
+  if (B.reactPose === 'slip') B.t += 1.2;   // time to land and lie there
+  B.reactLen = B.t;
   say(pr.say, B.t);
   G.fxAt[pr.spot] = 1.6;
   G.fx.push({ x: B.x, y: B.y - 160, text: pr.fx, t: 0, life: 1.5 });
@@ -2619,6 +2728,7 @@ function update(dt) {
     const s = SPOTS[pr.spot]; G.anims.push({ kind: 'rings', x: s.x, y: FY[s.f] - s.mh * .6, t: 0, life: 2.4, col: FAM.noise.col });
     G.fx.push({ x: s.x, y: FY[s.f] - s.mh - 30, text: pr.fx, t: 0, life: 1.3 });
   }
+  updateDog(dt);
   for (const tr of G.traps) {
     tr.cool = Math.max(0, tr.cool - dt);
     if (tr.off || tr.cool > 0 || P.caught || P.hidden || floorOf(P.y) !== tr.f || Math.abs(P.x - tr.x) > 9) continue;
@@ -2842,6 +2952,7 @@ function render() {
   drawMarkers(ctx);
   if (hover && mode === 'play') { ctx.strokeStyle = 'rgba(245,196,0,.95)'; ctx.setLineDash([6, 5]); ctx.lineWidth = 3; ell(ctx, hover.x, FY[hover.f] + 2, 26, 6); ctx.stroke(); ctx.setLineDash([]); }
   if (!drawGeraldArt(ctx, B)) drawTarget(ctx, B);
+  drawDog(ctx);
   // blackout: dark room with a torch-sized hole around him
   for (const { id: room } of MAP.rooms) {
     const d = G.dark[room] || 0; if (d <= 0) continue;
@@ -2879,6 +2990,7 @@ function render() {
     if (hover.kind === 'item') label = `Grab: ${hover.name}`;
     else if (hover.kind === 'hide') label = P.hidden === hover.id ? 'Hiding here' : `Hide: ${hover.name}`;
     else if (hover.kind === 'trap') label = `Disarm: ${hover.name}`;
+    else if (hover.kind === 'dog') label = G.inv.includes('sausage') ? 'Feed Biscuit the sausage' : 'Biscuit (he wants a sausage)';
     else { const pr = hover.pr; label = `${FAM[pr.fam].name}: ${pr.name}` + (pr.armed ? ' (set)' : pr.need ? ` (needs ${ITEMS[pr.need].toLowerCase()})` : ''); }
     ctx.font = '15px "Permanent Marker", "Comic Sans MS", sans-serif';
     const w = ctx.measureText(label).width + 20, x = clamp(hover.x - w / 2, 6, W - w - 6), y = clamp(FY[hover.f] - hover.h - 64, 100, H - 40);
@@ -2911,6 +3023,7 @@ function snapPrank(s) {
   c.drawImage(bg, 0, 0, W, H);
   drawDynamic(c);
   if (!drawGeraldArt(c, B)) drawTarget(c, B);
+  drawDog(c);
   drawAnims(c);
   drawLighting(c);
   c.setTransform(1, 0, 0, 1, 0, 0);
@@ -2933,8 +3046,89 @@ function albumEntries() {
   groups.push({ title: 'Gadgets', items: Object.entries(GADGETS).map(([k, g]) => ({ id: 'gadget-' + k, ...g.prank })) });
   return groups;
 }
+/* ---------- the story ----------
+   Comic strips, three painted panels each with a caption underneath. The intro plays before Day 1 the first time;
+   each chapter's strip plays the first time you finish its last day. All of them can be watched again in the album. */
+const STORY = {
+  intro: { title: 'How the feud started', panels: [
+    'It started with one football over the fence. Gerald kept it.',
+    'Then he yelled at your puppy until it hid under the hedge.',
+    'Then he reported your bins to the council. Right. This means war.'] },
+  chapter1: { after: 5, title: 'Gerald strikes back', panels: [
+    'Sticky, sooty and fuming, Gerald watched your house day and night.',
+    'He took forty pages of complaints down to the council.',
+    'An official noise warning. For YOU. Time to hit him where it hurts: his precious garage.'] },
+  chapter2: { after: 10, title: 'Gerald strikes back again', panels: [
+    'Still damp and still sooty, Gerald made one phone call.',
+    'Your bike was towed away for "blocking his garage".',
+    'He waved it goodbye, then packed for his seaside chalet "to get away from you". You hid in his boot.'] },
+  chapter3: { after: 15, title: 'Back home, Gerald gets even', panels: [
+    'Sunburnt and full of sand, Gerald made posters. Of you.',
+    'Now the whole street whispers about "that menace".',
+    'Time to keep a low profile. For now.'] },
+  chapter4: { after: 15, title: 'Next: the street party', note: 'Chapter 4 is on its way: five days at the street party, with Biscuit on patrol.', panels: [
+    'Gerald got himself made chairman of the street party committee.',
+    'His very first rule: you are banned.',
+    "Banned? From a party with that much cake? Oh, you're going."] },
+  ending: { after: 20, title: 'The end... for now', panels: [
+    'The big day. Gerald on stage, in front of the biggest cake the street has ever seen.',
+    'SPLAT.',
+    'And for once the whole street laughs with Gerald, not at you. Even he cracks a grin.'] },
+};
+const seenStory = k => (prog.story || []).includes(k);
+function storyUnlocked(k) { const S = STORY[k]; return seenStory(k) || (S.after === undefined ? prog.unlocked > 1 : (prog.stars[S.after] || 0) > 0); }
+function storyAfter(i) { return Object.keys(STORY).filter(k => STORY[k].after === i && !seenStory(k)); }
+let storyQ = null;
+function playStory(keys, then) { storyQ = { keys: [...keys], then, step: 0 }; showStrip(); }
+function showStrip() {
+  const k = storyQ.keys[0], S = STORY[k];
+  if (!seenStory(k)) { (prog.story = prog.story || []).push(k); saveProg(); }
+  $('storyTitle').textContent = S.title;
+  const box = $('storyPanels'); box.innerHTML = '';
+  S.panels.forEach((cap, i) => {
+    const f = document.createElement('figure'); f.className = 'panel'; f.style.setProperty('--r', `${[-1.2, .8, -.6][i]}deg`);
+    const img = document.createElement('img'); img.src = `img/strip-${k}-${i + 1}.jpg`; img.alt = ''; img.decoding = 'async';
+    const fc = document.createElement('figcaption'); fc.textContent = cap;
+    f.append(img, fc); box.appendChild(f);
+  });
+  storyQ.step = 0; revealPanel();
+  show('story'); $('storyNext').focus();
+}
+function revealPanel() {
+  const ps = [...$('storyPanels').children], last = storyQ.step >= ps.length - 1, S = STORY[storyQ.keys[0]];
+  ps.forEach((p, i) => { p.classList.toggle('on', i <= storyQ.step); p.classList.toggle('cur', i === storyQ.step); });
+  $('storyNext').textContent = !last ? 'Next' : storyQ.keys.length > 1 ? 'Next page' : 'Continue';
+  $('storyNote').hidden = !(last && S.note); $('storyNote').textContent = S.note || '';
+}
+function storyNext() {
+  if (!storyQ) return;
+  if (storyQ.step < $('storyPanels').children.length - 1) { storyQ.step++; revealPanel(); sfx('pick'); return; }
+  storyQ.keys.shift();
+  if (storyQ.keys.length) showStrip(); else endStory();
+}
+function endStory() { if (!storyQ) return; const then = storyQ.then; storyQ = null; then(); }
+function storySection() {
+  const sec = document.createElement('section'); sec.className = 'album-group';
+  const h3 = document.createElement('h3'); h3.textContent = 'The story so far'; sec.appendChild(h3);
+  const grid = document.createElement('div'); grid.className = 'album-grid';
+  Object.keys(STORY).forEach((k, i) => {
+    const S = STORY[k], on = storyUnlocked(k), card = document.createElement(on ? 'button' : 'div');
+    card.className = 'snap' + (on ? '' : ' locked'); card.style.setProperty('--r', `${[1.5, -1, 2, -1.5, 1, -2][i % 6]}deg`);
+    if (on) {
+      card.type = 'button';
+      const img = document.createElement('img'); img.src = `img/strip-${k}-1.jpg`; img.alt = ''; img.loading = 'lazy'; card.appendChild(img);
+      card.addEventListener('click', () => playStory([k], openAlbum));
+    } else { const b = document.createElement('div'); b.className = 'blank'; b.textContent = '?'; card.appendChild(b); }
+    const nm = document.createElement('b'); nm.textContent = on ? S.title : 'Not seen yet'; card.appendChild(nm);
+    const sm = document.createElement('small'); sm.textContent = on ? 'Comic strip' : S.after >= LEVELS.length ? 'Coming soon' : S.after === undefined ? 'Start Day 1' : `Finish Day ${S.after + 1}`; card.appendChild(sm);
+    grid.appendChild(card);
+  });
+  sec.appendChild(grid);
+  return sec;
+}
 function openAlbum() {
   const root = $('albumGroups'); root.innerHTML = '';
+  root.appendChild(storySection());
   let have = 0, total = 0;
   for (const g of albumEntries()) {
     const sec = document.createElement('section'); sec.className = 'album-group';
@@ -3056,7 +3250,7 @@ function renderLevels() {
     box.appendChild(b);
   });
 }
-const OVERLAYS = ['menu', 'levels', 'options', 'how', 'brief', 'results', 'album', 'photo', 'rewards'];
+const OVERLAYS = ['menu', 'levels', 'options', 'how', 'brief', 'results', 'album', 'photo', 'rewards', 'story'];
 function show(id) { for (const o of OVERLAYS) $(o).hidden = o !== id; document.documentElement.classList.toggle('in-menu', !!id); }
 function openMenu() {
   mode = 'menu'; setPaused(false); show('menu');
@@ -3088,13 +3282,15 @@ function setPaused(on, withMenu) {
 }
 function resume() { setPaused(false); $('listPage').classList.remove('open'); $('rotate').hidden = true; }
 function openLevels() { mode = 'menu'; renderLevels(); show('levels'); }
-function openBrief(i) {
+function openBrief(i, afterStory) {
+  if (!afterStory && i === 0 && !seenStory('intro')) { playStory(['intro'], () => openBrief(0, true)); return; }
   audio(); newGame(i); mode = 'brief';
   const L = LEVELS[i];
   $('briefEyebrow').textContent = `Day ${i + 1} · ${MAP.name} · ${L.pranks.length} deeds · ${fmt(L.time)} on the clock`;
   $('briefTitle').textContent = L.name;
   $('briefText').textContent = `${L.text} Do every deed to finish: 3 stars with ${fmt(30)} or more left, 2 before the clock runs out, 1 after.`;
-  $('briefTip').textContent = 'Tip: ' + L.tip + (L.traps ? ' He has set traps today: tap one to disarm it before you walk into it.' : '');
+  $('briefTip').textContent = 'Tip: ' + L.tip + (L.traps ? ' He has set traps today: tap one to disarm it before you walk into it.' : '')
+    + (L.dog ? ' Biscuit the bulldog is on patrol downstairs: if he sees you he barks for Gerald. Grab the sausage in your yard to keep him busy.' : '');
   show('brief'); $('briefGo').focus();
 }
 let rotateDismissed = false;
@@ -3140,7 +3336,9 @@ function endLevel(reason) {
       : `All ${own.length} dirty deeds done ${timing}` + (bonusDone ? `, plus ${bonusDone} bonus` : '') + `. ${G.combos} combo${G.combos === 1 ? '' : 's'}, ${G.score} points.` + (stars < 3 ? ' Finish with 30 seconds left for 3 stars.' : '') + (unlocked.length ? ` Unlocked: ${unlocked.join(', ')}! See Rewards.` : '');
     const ul = $('resList'); ul.innerHTML = '';
     for (const pr of G.pranks) { if (pr.bonus && !pr.done) continue; const li = document.createElement('li'); li.className = pr.done ? '' : 'miss'; li.textContent = (pr.done ? '✓ ' : '✗ ') + (pr.bonus ? 'Bonus: ' : '') + pr.name; ul.appendChild(li); }
-    $('resNext').hidden = !(passed && G.li + 1 < LEVELS.length);
+    G.after = passed ? storyAfter(G.li) : [];   // a comic strip comes next the first time a chapter ends
+    $('resNext').textContent = G.after.length ? 'What happened next' : 'Next day';
+    $('resNext').hidden = !(passed && (G.li + 1 < LEVELS.length || G.after.length));
     show('results');
     ($('resNext').hidden ? $('resRetry') : $('resNext')).focus();
   }, 650);
@@ -3257,7 +3455,13 @@ $('optReset').addEventListener('click', () => {
 $('briefGo').addEventListener('click', play);
 $('briefBack').addEventListener('click', openLevels);
 $('resRetry').addEventListener('click', () => openBrief(G.li));
-$('resNext').addEventListener('click', () => openBrief(G.li + 1));
+$('resNext').addEventListener('click', () => {
+  const next = () => G.li + 1 < LEVELS.length ? openBrief(G.li + 1) : openMenu();
+  if (G.after && G.after.length) playStory(G.after, next); else next();
+});
+$('storyNext').addEventListener('click', storyNext);
+$('storyPanels').addEventListener('click', storyNext);
+$('storySkip').addEventListener('click', endStory);
 $('resMenu').addEventListener('click', openMenu);
 window.addEventListener('keydown', e => {
   if (e.key === 'p' || e.key === 'P' || (e.key === ' ' && mode === 'play')) { e.preventDefault(); togglePause(); }
